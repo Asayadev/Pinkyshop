@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>ShopSwift | User Panel - Premium Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #f4f6fc; padding-bottom: 90px; }
+        .product-card { transition: all 0.25s ease; border: 1px solid #eef2f6; cursor: pointer; }
+        .product-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -8px rgba(0,0,0,0.1); }
+        .toast-notify { position: fixed; bottom: 100px; right: 24px; z-index: 999; color: white; padding: 12px 20px; border-radius: 40px; font-size: 0.85rem; font-weight: 500; box-shadow: 0 10px 20px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 8px; opacity: 0; transition: opacity 0.25s ease; pointer-events: none; }
+        .toast-show { opacity: 1; pointer-events: none; }
+        .pulse-glow { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); animation: pulse 1.6s infinite; }
+        @keyframes pulse { 
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); } 
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } 
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } 
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        input, textarea, select { outline: none; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .smooth-slide-img { transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease; }
+        .group-hover\:scale-110:hover { transform: scale(1.1); }
+    </style>
+</head>
+<body class="antialiased">
+    <div id="toastMsg" class="toast-notify"></div>
+    <div id="app" class="max-w-4xl mx-auto px-4 py-4">
+        
+        <header class="bg-white rounded-2xl shadow-sm p-4 flex justify-between items-center mb-6 sticky top-0 z-20 backdrop-blur-sm bg-white/90">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-store text-blue-600 text-xl"></i>
+                <h1 class="text-lg font-bold text-gray-800">Pinky<span class="text-blue-600">Shop</span></h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <div v-if="loggedInUser" class="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full text-xs font-semibold text-blue-800">
+                    <i class="fas fa-user"></i> <span>{{ loggedInUser.name }}</span>
+                    <button @click="logout" class="ml-1 text-red-500 hover:text-red-700 font-bold"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+                <button v-else @click="showLoginModal = true" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-full font-bold transition flex items-center gap-1">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+            </div>
+        </header>
+
+        <div v-if="banners.length > 0 && activeTab === 'products' && !selectedProduct" class="relative rounded-2xl overflow-hidden shadow-md mb-6 bg-gray-200 h-40 sm:h-56 select-none cursor-grab active:cursor-grabbing" @touchstart="handleTouchStart($event, 'banner')" @touchend="handleTouchEnd($event, 'banner')" @mousedown="handleTouchStart($event, 'banner')" @mouseup="handleTouchEnd($event, 'banner')">
+            <img :src="banners[currentBannerIndex]" class="w-full h-full object-cover smooth-slide-img pointer-events-none" alt="Promo Banner">
+            <div class="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-extrabold uppercase px-2 py-0.5 rounded shadow-sm tracking-wider"> 🔥 Live Offer </div>
+            <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                <span v-for="(b, idx) in banners" :key="idx" @click="currentBannerIndex = idx" :class="idx === currentBannerIndex ? 'bg-blue-600 w-4' : 'bg-white/70 w-2'" class="h-2 rounded-full cursor-pointer transition-all duration-300"></span>
+            </div>
+        </div>
+
+        <div v-show="activeTab === 'products'">
+            
+            <div v-if="!selectedProduct" class="space-y-4 mb-5">
+                
+                <div class="flex justify-center w-full">
+                    <div class="relative w-full max-w-md mx-auto">
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input type="text" v-model="searchQuery" placeholder="Search products..." class="pl-10 pr-4 py-2.5 border border-gray-200 rounded-full w-full text-xs bg-white shadow-xs text-center focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition font-medium">
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Categories</span>
+                        <span v-if="selectedCategory !== 'All'" @click="selectedCategory = 'All'" class="text-xs text-blue-600 font-semibold cursor-pointer">Clear Filter</span>
+                    </div>
+                    <div class="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                        <button v-for="cat in availableCategories" :key="cat" @click="selectedCategory = cat" :class="selectedCategory === cat ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200'" class="px-4 py-1.5 rounded-full text-xs font-semibold transition shrink-0"> {{ cat }} </button>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center pt-2">
+                    <h2 class="text-base font-bold text-gray-800">✨ {{ selectedCategory }} Products</h2>
+                </div>
+
+                <!-- NEW PRODUCT CARD DESIGN INTEGRATED (as requested) -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div v-for="product in filteredProducts" :key="product.id" class="relative bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group cursor-pointer" @click="viewProductDetail(product)">
+                        <!-- Badge top-right -->
+                        <div v-if="product.badge" class="absolute top-2 right-2 z-10">
+                            <span class="bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm">
+                                <i class="fas fa-fire mr-0.5"></i> {{ product.badge }}
+                            </span>
+                        </div>
+
+                        <!-- Wishlist heart icon (top-left) -->
+                        <button @click.stop="toggleWishlist(product)" class="absolute top-2 left-2 bg-white/80 hover:bg-white text-red-500 w-7 h-7 rounded-full shadow-sm flex items-center justify-center transition z-20 text-sm">
+                            <i :class="isInWishlist(product) ? 'fas fa-heart' : 'far fa-heart'"></i>
+                        </button>
+
+                        <!-- Image container with zoom and stock overlay -->
+                        <div class="relative aspect-square overflow-hidden bg-gray-50">
+                            <img :src="product.images && product.images.length ? product.images[0] : (product.image || 'https://placehold.co/300x200?text=Product')" 
+                                 :alt="product.name" 
+                                 :class="{'opacity-40 grayscale': product.stockStatus && product.stockStatus !== 'In stock'}"
+                                 class="w-full h-full object-contain p-4 transition-transform duration-300 group-hover:scale-110"
+                                 onerror="this.src='https://placehold.co/300x200?text=Product'">
+                            
+                            <div v-if="product.stockStatus && product.stockStatus !== 'In stock'" 
+                                 class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <span class="bg-red-600/90 text-white text-xs font-black px-4 py-2 rounded-full rotate-[-10deg] shadow-lg border-2 border-white">
+                                    {{ product.stockStatus.toUpperCase() }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="p-4">
+                            <p class="text-gray-400 text-[10px] uppercase font-bold mb-1">{{ product.category || 'General' }}</p>
+                            <h3 class="text-sm font-semibold text-gray-800 truncate mb-2">{{ product.name }}</h3>
+
+                            <div class="mb-4">
+                                <div class="flex items-baseline gap-1.5 flex-wrap">
+                                    <span class="text-base font-black text-blue-600">₹{{ Number(product.price).toFixed(2) }}</span>
+                                    <span v-if="product.originalPrice && Number(product.originalPrice) > Number(product.price)" class="text-gray-400 text-[11px] line-through">₹{{ Number(product.originalPrice).toFixed(2) }}</span>
+                                </div>
+                                <span v-if="product.originalPrice && Number(product.originalPrice) > Number(product.price)" class="inline-block mt-1 text-green-700 text-[10px] font-extrabold bg-green-100 px-2 py-0.5 rounded-full">
+                                    {{ Math.round(((Number(product.originalPrice) - Number(product.price)) / Number(product.originalPrice)) * 100) }}% OFF
+                                </span>
+                            </div>
+
+                            <button @click.stop="addToCart(product)" 
+                                    :disabled="product.stockStatus && product.stockStatus !== 'In stock'"
+                                    :class="(product.stockStatus && product.stockStatus !== 'In stock') ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:scale-95'"
+                                    class="w-full text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-md">
+                                <i class="fas fa-shopping-basket mr-2"></i>
+                                {{ (product.stockStatus && product.stockStatus !== 'In stock') ? (product.stockStatus === 'Out of stock' ? 'Out of Stock' : product.stockStatus) : 'Add to Cart' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div v-if="filteredProducts.length === 0" class="text-center py-16 text-gray-400 text-sm">No products found inside this context</div>
+            </div>
+
+            <!-- Product Detail View (kept original for consistency) -->
+            <div v-else class="space-y-6">
+                <div class="bg-white rounded-2xl shadow-sm p-4 animate-fade-in relative">
+                    <button @click="selectedProduct = null" class="mb-4 text-xs font-bold text-blue-600 flex items-center gap-1">
+                        <i class="fas fa-arrow-left"></i> Back to Products
+                    </button>
+                    
+                    <span v-if="selectedProduct.badge" class="absolute top-4 right-4 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-md z-20 uppercase tracking-wide">
+                        <i class="fas fa-fire mr-1"></i> {{ selectedProduct.badge }}
+                    </span>
+
+                    <div class="relative rounded-xl overflow-hidden bg-gray-50 h-64 flex items-center justify-center mb-4 select-none cursor-grab active:cursor-grabbing" 
+                         @touchstart="handleTouchStart($event, 'product')" 
+                         @touchend="handleTouchEnd($event, 'product')" 
+                         @mousedown="handleTouchStart($event, 'product')" 
+                         @mouseup="handleTouchEnd($event, 'product')"
+                         @click="openFullScreen">
+                        
+                        <div v-if="selectedProduct.stockStatus && selectedProduct.stockStatus !== 'In stock'" class="absolute inset-0 bg-white/40 backdrop-blur-sm flex items-center justify-center z-10 pointer-events-none">
+                            <span class="text-red-600 font-black text-xl uppercase tracking-wider bg-white px-5 py-2.5 rounded-xl shadow-2xl border-2 border-red-600 text-center transform -rotate-6">
+                                {{ selectedProduct.stockStatus }}
+                            </span>
+                        </div>
+
+                        <img :src="getProductSliderImages()[currentProductImageIndex]" class="h-56 object-contain pointer-events-none smooth-slide-img" :key="currentProductImageIndex" alt="Product Image">
+                        
+                        <div class="absolute top-2 left-2 bg-black/40 text-white text-[9px] px-2 py-1 rounded-md z-10 flex items-center gap-1 pointer-events-none">
+                            <i class="fas fa-expand"></i> Tap to view
+                        </div>
+
+                        <div v-if="getProductSliderImages().length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+                            <span v-for="(img, idx) in getProductSliderImages()" :key="idx" @click.stop="currentProductImageIndex = idx" :class="idx === currentProductImageIndex ? 'bg-blue-600 w-4' : 'bg-gray-300 w-2'" class="h-2 rounded-full cursor-pointer transition-all duration-300"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <span class="bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">{{ selectedProduct.category }}</span>
+                        <h2 class="text-xl font-black text-gray-800 mt-2">{{ selectedProduct.name }}</h2>
+                        <p class="text-gray-600 text-sm mt-1 leading-relaxed">{{ selectedProduct.description }}</p>
+                        <div class="mt-4 flex items-baseline gap-2">
+                            <span class="text-2xl font-black text-blue-700">₹{{ Number(selectedProduct.price).toFixed(2) }}</span>
+                            <span v-if="selectedProduct.originalPrice && Number(selectedProduct.originalPrice) > Number(selectedProduct.price)" class="text-base text-gray-400 line-through">₹{{ Number(selectedProduct.originalPrice).toFixed(2) }}</span>
+                            <span v-if="selectedProduct.originalPrice && Number(selectedProduct.originalPrice) > Number(selectedProduct.price)" class="text-sm text-red-500 font-bold bg-red-50 px-2 py-0.5 rounded">
+                                {{ calculateDiscount(selectedProduct.originalPrice, selectedProduct.price) }}% OFF
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 sticky bottom-[70px] bg-white pt-2 pb-1 z-10">
+                        <button @click="addToCart(selectedProduct)" :disabled="(selectedProduct.stockStatus && selectedProduct.stockStatus !== 'In stock')" :class="(selectedProduct.stockStatus && selectedProduct.stockStatus !== 'In stock') ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'" class="text-white py-3 rounded-xl font-bold text-sm shadow flex items-center justify-center gap-2 transition">
+                            <i class="fas fa-cart-plus"></i> Add To Cart
+                        </button>
+                        <button @click="buyNow(selectedProduct)" :disabled="(selectedProduct.stockStatus && selectedProduct.stockStatus !== 'In stock')" :class="(selectedProduct.stockStatus && selectedProduct.stockStatus !== 'In stock') ? 'bg-gray-300 cursor-not-allowed text-gray-500' : 'bg-orange-500 hover:bg-orange-600 text-white'" class="py-3 rounded-xl font-bold text-sm shadow flex items-center justify-center gap-2 transition">
+                            <i class="fas fa-bolt"></i> Buy Now
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="relatedProducts.length > 0" class="bg-white rounded-2xl shadow-sm p-4 animate-fade-in">
+                    <h3 class="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-layer-group text-blue-600"></i> Related Products
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div v-for="product in relatedProducts" :key="product.id" @click="viewProductDetail(product)" class="product-card bg-white rounded-xl overflow-hidden shadow-sm flex flex-col justify-between relative">
+                            <span v-if="product.badge" class="absolute top-0 right-0 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-bl-lg shadow-sm z-20 uppercase">
+                                {{ product.badge }}
+                            </span>
+                            <button @click.stop="toggleWishlist(product)" class="absolute top-4 right-2 bg-white/80 hover:bg-white text-red-500 w-7 h-7 rounded-full shadow-sm flex items-center justify-center transition z-20 text-xs">
+                                <i :class="isInWishlist(product) ? 'fas fa-heart' : 'far fa-heart'"></i>
+                            </button>
+                            <span class="absolute top-2 left-2 bg-slate-900/70 text-white text-[8px] font-medium px-1.5 py-0.5 rounded z-20"> {{ product.category }} </span>
+                            
+                            <div class="h-28 bg-gray-50 flex items-center justify-center p-2 relative">
+                                <div v-if="product.stockStatus && product.stockStatus !== 'In stock'" class="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10 pointer-events-none">
+                                    <span class="text-red-600 font-black text-[9px] leading-tight uppercase tracking-wider bg-white px-1 py-1 rounded shadow-lg border border-red-500 text-center transform -rotate-12 w-3/4">
+                                        {{ product.stockStatus }}
+                                    </span>
+                                </div>
+                                <img :src="product.images ? product.images[0] : product.image" class="h-24 object-contain" :alt="product.name" onerror="this.src='https://placehold.co/300x200?text=Product'">
+                            </div>
+                            <div class="p-3">
+                                <h4 class="font-bold text-xs text-gray-800 truncate">{{ product.name }}</h4>
+                                <div class="flex justify-between items-center mt-2 flex-wrap gap-1">
+                                    <div>
+                                        <span class="text-sm font-black text-blue-700">₹{{ Number(product.price).toFixed(2) }}</span>
+                                        <span v-if="product.originalPrice && Number(product.originalPrice) > Number(product.price)" class="text-[10px] text-gray-400 line-through ml-1">₹{{ Number(product.originalPrice).toFixed(2) }}</span>
+                                    </div>
+                                    <span class="text-[10px] text-blue-600 font-bold">View</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-show="activeTab === 'wishlist'">
+            <div class="bg-white rounded-2xl shadow-sm p-4">
+                <div class="border-b pb-3 mb-3 flex justify-between items-center">
+                    <h2 class="text-lg font-bold">My Wishlist ❤️</h2>
+                    <button v-if="wishlist.length" @click="wishlist = []" class="text-red-500 text-xs hover:underline">Clear Wishlist</button>
+                </div>
+                <div v-if="wishlist.length === 0" class="py-12 text-center text-gray-400">
+                    <i class="far fa-heart text-4xl mb-2 opacity-30"></i>
+                    <p class="text-sm">Your wishlist is empty.</p>
+                </div>
+                <div v-else class="grid grid-cols-1 gap-4">
+                    <div v-for="product in wishlist" :key="product.id" class="product-card bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 p-3 relative flex gap-3">
+                        <button @click.stop="toggleWishlist(product)" class="absolute top-2 right-2 text-red-500 text-sm"><i class="fas fa-trash-alt"></i></button>
+                        <div class="w-24 h-24 bg-gray-50 rounded-lg flex-shrink-0 flex items-center justify-center relative">
+                            <div v-if="product.stockStatus && product.stockStatus !== 'In stock'" class="absolute inset-0 bg-white/60 flex items-center justify-center z-10">
+                                <span class="text-red-600 font-bold text-[8px] border border-red-600 px-1 rotate-[-10deg] bg-white">OUT OF STOCK</span>
+                            </div>
+                            <img :src="product.images ? product.images[0] : product.image" class="h-20 object-contain" @click="viewProductDetail(product)" onerror="this.src='https://placehold.co/100x100'">
+                        </div>
+                        <div class="flex-1 flex flex-col justify-between">
+                            <div><h3 class="font-bold text-sm text-gray-800 truncate pr-6">{{ product.name }}</h3><div class="flex items-center gap-2"><span class="text-sm font-black text-blue-700">₹{{ Number(product.price).toFixed(2) }}</span><span v-if="product.originalPrice" class="text-[10px] text-gray-400 line-through">₹{{ product.originalPrice }}</span></div></div>
+                            <div class="flex gap-2 mt-2">
+                                <button @click="addToCart(product)" :disabled="!!(product.stockStatus && product.stockStatus !== 'In stock')" :class="(product.stockStatus && product.stockStatus !== 'In stock') ? 'bg-gray-300' : 'bg-blue-600'" class="flex-1 text-white text-[10px] py-2 rounded-lg font-bold"><i class="fas fa-cart-plus mr-1"></i> Cart</button>
+                                <button @click="buyNow(product)" :disabled="!!(product.stockStatus && product.stockStatus !== 'In stock')" :class="(product.stockStatus && product.stockStatus !== 'In stock') ? 'bg-gray-200 text-gray-400' : 'bg-orange-500 text-white'" class="flex-1 text-[10px] py-2 rounded-lg font-bold"><i class="fas fa-bolt mr-1"></i> Buy</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-show="activeTab === 'cart'">
+            <div class="bg-white rounded-2xl shadow-sm p-4">
+                <div class="border-b pb-3 mb-3 flex justify-between items-center"><h2 class="text-lg font-bold">Shopping Cart 🛒</h2><button v-if="cartItems.length" @click="cartItems = []" class="text-red-500 text-xs hover:underline">Remove all</button></div>
+                <div v-if="cartItems.length === 0" class="py-12 text-center text-gray-400"><i class="fas fa-shopping-cart text-4xl mb-2 opacity-30"></i><p class="text-sm">Your cart is empty.</p></div>
+                <div v-else class="space-y-3">
+                    <div v-for="item in cartItems" :key="item.id" class="flex gap-3 items-center justify-between border-b pb-3">
+                        <img :src="item.image" class="w-12 h-12 object-contain bg-gray-50 rounded" alt="" onerror="this.src='https://placehold.co/100x100'">
+                        <div class="flex-1 min-w-0"><p class="font-semibold text-sm truncate">{{ item.name }}</p><p class="text-xs text-blue-600 font-bold">₹{{ Number(item.price).toFixed(2) }}</p></div>
+                        <div class="flex items-center gap-2"><button @click="updateQuantity(item, -1)" class="w-6 h-6 rounded bg-gray-100 text-xs font-bold">-</button><span class="text-xs font-bold w-4 text-center">{{ item.quantity }}</span><button @click="updateQuantity(item, 1)" class="w-6 h-6 rounded bg-gray-100 text-xs font-bold">+</button></div>
+                    </div>
+                    <div class="pt-3 flex justify-between items-center font-bold text-lg"><span>Total Bill:</span><span class="text-blue-700">₹{{ cartTotal.toFixed(2) }}</span></div>
+                    <button @click="openCheckout" class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md"><i class="fas fa-truck"></i> Proceed to Checkout</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-show="activeTab === 'orders'">
+            <div class="mb-4"><h2 class="text-lg font-bold">📦 My Orders History Logs</h2></div>
+            <div v-if="!loggedInUser" class="bg-white rounded-2xl p-8 text-center text-gray-400 border border-dashed"><i class="fas fa-lock text-3xl mb-2 text-gray-300"></i><p class="text-sm mb-3">Please login using your Mobile Number to see your orders.</p><button @click="showLoginModal = true" class="bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-bold">Login Now</button></div>
+            <div v-else-if="orders.length === 0" class="bg-white rounded-2xl p-10 text-center text-gray-400"><i class="fas fa-box-open text-4xl mb-2 opacity-30"></i><p class="text-sm">No orders found for {{ loggedInUser.phone }}</p></div>
+            <div v-else class="space-y-6">
+                <div v-for="order in orders" :key="order.id" class="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+                    <div class="flex justify-between items-center border-b pb-3 mb-4 text-xs"><div><span class="font-bold text-blue-600">Order #{{ order.id.slice(-6) }}</span><span class="text-gray-400 ml-2">{{ formatDate(order.date) }}</span></div><div class="flex items-center gap-1.5"><span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">{{ order.paymentMethod || 'COD' }}</span><span :class="getStatusBadge(order.status)" class="px-2 py-0.5 rounded-full text-[10px] font-bold">{{ order.status === 'return_requested' || order.status === 'return_approved' || order.status === 'return_rejected' || order.status === 'exchange_requested' || order.status === 'exchange_approved' || order.status === 'exchange_rejected' ? (order.status.includes('requested') ? 'RETURN/EXCHANGE REQUESTED' : (order.status.includes('approved') ? 'RETURN/EXCHANGE APPROVED' : 'RETURN/EXCHANGE REJECTED')) : order.status.toUpperCase() }}</span></div></div>
+                    <div class="mb-6 px-2"><div v-if="order.status === 'rejected'" class="flex items-center justify-center gap-2 bg-red-50 text-red-700 p-3 rounded-xl text-xs font-bold border border-red-200"><i class="fas fa-times-circle text-base"></i> <span>Your order has been rejected / cancelled by the seller.</span></div><div v-else class="flex justify-between items-center relative"><div class="absolute top-4 left-0 w-full h-1 bg-gray-200 z-0 rounded-full"></div><div class="absolute top-4 left-0 h-1 bg-blue-500 z-0 rounded-full transition-all duration-500" :style="{ width: getTrackingProgressWidth(order.status) }"></div><div class="relative z-10 flex flex-col items-center w-1/4"><div :class="getTrackingCircleClass(order.status, 'pending')" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"> <i class="fas fa-clock"></i> </div><span class="text-[10px] font-bold mt-1.5 text-gray-600">Pending</span></div><div class="relative z-10 flex flex-col items-center w-1/4"><div :class="getTrackingCircleClass(order.status, 'confirmed')" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"> <i class="fas fa-check-circle"></i> </div><span class="text-[10px] font-bold mt-1.5 text-gray-600">Confirmed</span></div><div class="relative z-10 flex flex-col items-center w-1/4"><div :class="getTrackingCircleClass(order.status, 'shipped')" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"> <i class="fas fa-truck"></i> </div><span class="text-[10px] font-bold mt-1.5 text-gray-600">Shipped</span></div><div class="relative z-10 flex flex-col items-center w-1/4"><div :class="getTrackingCircleClass(order.status, 'delivered')" class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300"> <i class="fas fa-home"></i> </div><span class="text-[10px] font-bold mt-1.5 text-gray-600">Delivered</span></div></div></div>
+                    <div class="text-xs text-gray-600 space-y-1 mb-3"><p><strong>Deliver to:</strong> {{ order.customerName }} ({{ order.customerPhone }})</p><p><strong>Address:</strong> {{ order.customerAddress }}</p></div>
+                    <div class="bg-gray-50 p-2.5 rounded text-xs mb-3"><span v-for="it in order.items" class="inline-block mr-2 bg-white px-2 py-1 rounded border text-[10px] font-medium text-gray-700">{{ it.name }} x{{ it.quantity }}</span></div>
+                    <div v-if="order.status === 'delivered'" class="mt-4 bg-blue-50/50 border border-blue-100 rounded-xl p-3 animate-fade-in mb-3"><p class="text-xs font-bold text-gray-700 mb-2"><i class="fas fa-star text-yellow-500 mr-1"></i> How was the product?</p><div v-if="!order.rating" class="flex flex-wrap gap-2"><button v-for="rate in ['Very bad', 'Bad', 'It is ok', 'Good', 'Very good']" :key="rate" @click="submitRating(order.id, rate)" class="bg-white hover:bg-blue-600 hover:text-white border border-gray-200 text-gray-700 text-[11px] px-3 py-1.5 rounded-full font-medium transition shadow-xs">{{ rate }}</button></div><div v-else class="text-xs font-semibold text-green-700 flex items-center gap-1"><i class="fas fa-check-circle"></i> Thanks for your feedback! You rated: <span class="font-bold underline">{{ order.rating }}</span></div></div>
+                    <div class="mt-3 flex justify-between items-center"><div><button v-if="order.status === 'delivered' && !order.returnRequest && isEligibleForReturn(order.date)" @click="initiateReturnExchange(order)" class="bg-red-50 hover:bg-red-100 text-red-600 text-[11px] font-bold px-3 py-1.5 rounded-xl border border-red-200 transition"><i class="fas fa-undo-alt mr-1"></i> Return / Exchange</button><span v-if="order.returnRequest || order.status.includes('requested') || order.status.includes('approved') || order.status.includes('rejected')" class="text-[11px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded border border-orange-200"> Status: {{ order.status === 'return_approved' || order.status === 'exchange_approved' ? 'Return/Exchange Approved' : (order.status === 'return_rejected' || order.status === 'exchange_rejected' ? 'Return/Exchange Rejected' : 'Return/Exchange Requested') }} </span></div><div class="text-right text-xs font-bold text-gray-800"> Total Paid: <span class="text-blue-700 text-sm font-black">₹{{ Number(order.total).toFixed(2) }}</span> </div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Return Modal, FullScreen, Login, Checkout (kept original) -->
+        <div v-if="showReturnPage" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl overflow-y-auto max-h-[90vh]"><div class="flex justify-between items-center mb-4 border-b pb-2"><h3 class="text-base font-bold text-gray-800"><i class="fas fa-exchange-alt text-red-600 mr-2"></i> Product Return / Exchange</h3><button @click="showReturnPage = false" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button></div><div class="bg-slate-50 p-3 rounded-xl mb-4 text-xs space-y-1"><p class="font-bold text-gray-700">Items inside Order:</p><div v-for="item in activeReturnOrder.items" class="text-gray-600">• {{ item.name }} (x{{ item.quantity }})</div></div><div class="mb-4"><label class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">Please select reason for return / exchange:</label><select v-model="returnPayload.reason" class="w-full px-3 py-2 border rounded-xl text-xs bg-white focus:ring-2 focus:ring-red-400"><option value="" disabled selected>-- Select a reason --</option><option value="Quality issue">Quality issue</option><option value="Damaged used product">Damaged used product</option><option value="item missing in the product">item missing in the product</option><option value="different product delivered">different product delivered</option></select></div><div v-if="returnPayload.reason" class="mb-4 border-t pt-3 animate-fade-in"><label class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide">What do you want to do?</label><div class="grid grid-cols-2 gap-3"><label class="flex items-center gap-2 p-3 border rounded-xl cursor-pointer hover:bg-slate-50" :class="returnPayload.action === 'Return' ? 'border-red-500 bg-red-50/30' : 'border-gray-200'"><input type="radio" value="Return" v-model="returnPayload.action" class="text-red-600"><span class="text-xs font-bold text-gray-800">Return</span></label><label class="flex items-center gap-2 p-3 border rounded-xl cursor-pointer hover:bg-slate-50" :class="returnPayload.action === 'Exchange' ? 'border-orange-500 bg-orange-50/30' : 'border-gray-200'"><input type="radio" value="Exchange" v-model="returnPayload.action" class="text-orange-600"><span class="text-xs font-bold text-gray-800">Exchange</span></label></div></div><div v-if="returnPayload.action === 'Return'" class="space-y-3 border-t pt-3 animate-fade-in"><p class="text-xs font-bold text-red-600"><i class="fas fa-university"></i> Provide Bank Details for Refund processing:</p><div> <label class="block text-[11px] font-semibold text-gray-600 mb-1">Account Holder Name</label> <input type="text" v-model="returnPayload.bankDetails.name" placeholder="Enter full name" class="w-full px-3 py-1.5 border rounded-xl text-xs"> </div><div> <label class="block text-[11px] font-semibold text-gray-600 mb-1">Bank Name</label> <input type="text" v-model="returnPayload.bankDetails.bankName" placeholder="e.g. SBI, HDFC" class="w-full px-3 py-1.5 border rounded-xl text-xs"> </div><div> <label class="block text-[11px] font-semibold text-gray-600 mb-1">Account Number</label> <input type="password" v-model="returnPayload.bankDetails.accNumber" placeholder="Enter bank account number" class="w-full px-3 py-1.5 border rounded-xl text-xs"> </div><div> <label class="block text-[11px] font-semibold text-gray-600 mb-1">IFSC Code</label> <input type="text" v-model="returnPayload.bankDetails.ifsc" placeholder="11-digit IFSC code" class="w-full px-3 py-1.5 border rounded-xl text-xs uppercase"> </div><div> <label class="block text-[11px] font-semibold text-gray-600 mb-1">Mobile Number</label> <input type="tel" v-model="returnPayload.bankDetails.phone" placeholder="Registered mobile number" class="w-full px-3 py-1.5 border rounded-xl text-xs"> </div></div><div class="mt-5 pt-2 border-t" v-if="returnPayload.action"><button @click="submitReturnExchangeRequest" class="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl font-bold text-xs transition shadow flex items-center justify-center gap-1"><i class="fas fa-paper-plane"></i> Submit Request</button></div><p class="text-[10px] text-center text-red-500 mt-3 font-bold">⚠️ Return & exchange processes are strictly valid for 6 days from delivery date.</p></div></div>
+
+        <div v-if="showFullScreenImage && selectedProduct" class="fixed inset-0 bg-black/95 z-[9999] flex items-center justify-center touch-none" @click="showFullScreenImage = false"><button class="absolute top-6 right-6 text-white text-2xl z-[10000] bg-white/20 w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/40 backdrop-blur-sm transition" @click="showFullScreenImage = false"><i class="fas fa-times"></i></button><img :src="getProductSliderImages()[currentProductImageIndex]" class="max-w-[95%] max-h-[90vh] object-contain pointer-events-auto" @click.stop alt="Full Screen Product"><button v-if="getProductSliderImages().length > 1" @click.stop="prevProductImage" class="absolute left-4 top-1/2 -translate-y-1/2 text-white text-xl w-10 h-10 flex items-center justify-center bg-white/20 hover:bg-white/40 rounded-full backdrop-blur-sm"><i class="fas fa-chevron-left"></i></button><button v-if="getProductSliderImages().length > 1" @click.stop="nextProductImage" class="absolute right-4 top-1/2 -translate-y-1/2 text-white text-xl w-10 h-10 flex items-center justify-center bg-white/20 hover:bg-white/40 rounded-full backdrop-blur-sm"><i class="fas fa-chevron-right"></i></button></div>
+
+        <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-2.5 px-6 flex justify-around items-center z-40 shadow-lg max-w-4xl mx-auto rounded-t-2xl">
+            <button @click="activeTab='products'; selectedProduct=null" :class="activeTab==='products' ? 'text-blue-600 font-bold' : 'text-gray-400'" class="flex flex-col items-center gap-1"><i class="fas fa-th-large text-lg"></i><span class="text-[10px]">Product</span></button>
+            <button @click="activeTab='wishlist'" :class="activeTab==='wishlist' ? 'text-blue-600 font-bold' : 'text-gray-400'" class="flex flex-col items-center gap-1 relative"><i class="fas fa-heart text-lg"></i><span class="text-[10px]">Wishlist</span><span v-if="wishlist.length" class="absolute -top-1 right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{{ wishlist.length }}</span></button>
+            <button @click="activeTab='cart'" :class="activeTab==='cart' ? 'text-blue-600 font-bold' : 'text-gray-400'" class="flex flex-col items-center gap-1 relative"><i class="fas fa-shopping-cart text-lg"></i><span class="text-[10px]">Cart</span><span v-if="cartItems.length" class="absolute -top-1 right-2 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{{ cartItems.length }}</span></button>
+            <button @click="activeTab='orders'" :class="activeTab==='orders' ? 'text-blue-600 font-bold' : 'text-gray-400'" class="flex flex-col items-center gap-1"><i class="fas fa-box text-lg"></i><span class="text-[10px]">Order</span></button>
+        </div>
+
+        <div v-if="showLoginModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl"><div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-gray-800"><i class="fas fa-user-lock text-blue-600 mr-2"></i> User Login</h3><button @click="showLoginModal = false" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button></div><div class="space-y-4"><div><label class="block text-xs font-semibold text-gray-600 mb-1">Your Name</label><input type="text" v-model="loginForm.name" placeholder="Enter your full name" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-400"></div><div><label class="block text-xs font-semibold text-gray-600 mb-1">Mobile Number</label><input type="tel" v-model="loginForm.phone" placeholder="Enter 10-digit mobile number" class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-400"></div><button @click="submitLogin" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold text-sm transition"> Proceed & Login </button></div></div></div>
+
+        <div v-if="showCheckoutModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showCheckoutModal = false"><div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl overflow-y-auto max-h-[90vh]"><div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-gray-800"><i class="fas fa-shipping-fast text-green-600 mr-2"></i> Shipping & Payment</h3><button @click="showCheckoutModal = false" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button></div><div class="space-y-4"><div><label class="block text-xs font-semibold text-gray-600 mb-1">Your Name:</label><input type="text" v-model="checkoutForm.name" placeholder="Your name" class="w-full px-3 py-2 border rounded-xl text-sm"></div><div><label class="block text-xs font-semibold text-gray-600 mb-1">Mobile Number:</label><input type="tel" v-model="checkoutForm.phone" placeholder="Mobile number" class="w-full px-3 py-2 border rounded-xl text-sm"></div><div><label class="block text-xs font-semibold text-gray-600 mb-1">Delivery Address:</label><textarea v-model="checkoutForm.address" rows="2" placeholder="Full Delivery Address" class="w-full px-3 py-2 border rounded-xl text-sm"></textarea></div><div class="border-t pt-3"><label class="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wide"><i class="fas fa-wallet text-blue-600 mr-1"></i> Select Payment Method</label><div class="space-y-2"><label class="flex items-center justify-between p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition" :class="selectedPaymentMethod === 'COD' ? 'border-blue-500 bg-blue-50/30' : 'border-gray-200'"><div class="flex items-center gap-3"><input type="radio" value="COD" v-model="selectedPaymentMethod" class="w-4 h-4 text-blue-600"><div class="text-xs"><p class="font-bold text-gray-800">Cash on Delivery (COD)</p><p class="text-gray-400 font-medium">Pay cash during parcel drop</p></div></div><i class="fas fa-money-bill-wave text-green-600 text-base"></i></label><label class="flex items-center justify-between p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition" :class="selectedPaymentMethod === 'ONLINE' ? 'border-blue-500 bg-blue-50/30' : 'border-gray-200'"><div class="flex items-center gap-3"><input type="radio" value="ONLINE" v-model="selectedPaymentMethod" class="w-4 h-4 text-blue-600"><div class="text-xs"><p class="font-bold text-gray-800">Pay Online Now</p><p class="text-gray-400 font-medium text-[11px]">UPI, Cards, NetBanking</p></div></div><i class="fas fa-credit-card text-blue-600 text-base"></i></label></div></div><div v-if="selectedPaymentMethod === 'ONLINE'" class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-800"><p class="font-bold mb-1"><i class="fas fa-info-circle"></i> Online Payment Instructions:</p><p class="mb-2 text-gray-600 font-medium">Click the gateway link below to complete payment, then confirm order.</p><a :href="adminPaymentLink || '#'" target="_blank" class="inline-flex items-center gap-1.5 font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg shadow-sm transition"><i class="fas fa-external-link-alt"></i> Click to Pay Online</a></div><div class="bg-gray-50 p-3 rounded-xl flex justify-between text-xs font-bold text-gray-700"><span>Order Total Summary:</span><span class="text-blue-600">₹{{ cartTotal.toFixed(2) }}</span></div><button @click="confirmOrder" class="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-bold text-sm transition flex items-center justify-center gap-1 shadow"><i class="fas fa-check-circle"></i> Place Order via {{ selectedPaymentMethod }}</button></div></div></div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+    <script>
+        const firebaseConfig = { 
+            apiKey: "AIzaSyDbVF9_RqXDXdIASOy2WgbwSmwuiowu2Bg", 
+            authDomain: "growthxpressx.firebaseapp.com", 
+            databaseURL: "https://growthxpressx-default-rtdb.firebaseio.com", 
+            projectId: "growthxpressx", 
+            storageBucket: "growthxpressx.appspot.com", 
+            messagingSenderId: "967008233535", 
+            appId: "1:967008233535:android:ac720ab7c8f7b10bf4308a" 
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        new Vue({
+            el: '#app',
+            data: {
+                activeTab: 'products',
+                showLoginModal: false,
+                showCheckoutModal: false,
+                loggedInUser: null,
+                searchQuery: '',
+                availableCategories: ['All', 'Mobile', 'Electronics', 'Mobile & Accessories', 'Beauty product', 'Footwear', 'vegetables', 'Watches'],
+                selectedCategory: 'All',
+                selectedPaymentMethod: 'COD',
+                adminPaymentLink: 'https://paytm.me/',
+                loginForm: { name: '', phone: '' },
+                checkoutForm: { name: '', phone: '', address: '' },
+                products: [],
+                cartItems: [],
+                wishlist: [],
+                orders: [],
+                banners: [],
+                currentBannerIndex: 0,
+                bannerTimer: null,
+                selectedProduct: null,
+                currentProductImageIndex: 0,
+                touchStartX: 0,
+                touchEndX: 0,
+                isSwiping: false,
+                showFullScreenImage: false,
+                previousOrderStatuses: {},
+                showReturnPage: false,
+                activeReturnOrder: null,
+                returnPayload: { reason: '', action: '', bankDetails: { name: '', bankName: '', accNumber: '', ifsc: '', phone: '' } }
+            },
+            computed: {
+    uniqueCategories() {
+        let cats = this.products.map(p => p.category).filter(Boolean);
+        return [...new Set(cats)];
+    },
+    
+    filteredProducts() {
+        let list = [...this.products].reverse();
+        
+        if (this.selectedCategory && this.selectedCategory !== 'All') {
+            list = list.filter(p => p.category === this.selectedCategory);
+        }
+        
+        if (this.searchQuery && this.searchQuery.trim()) {
+            const q = this.searchQuery.toLowerCase();
+            list = list.filter(p => 
+                p.name.toLowerCase().includes(q) || 
+                (p.category && p.category.toLowerCase().includes(q)) ||
+                (p.description && p.description.toLowerCase().includes(q)) ||
+                (p.shopkeeperName && p.shopkeeperName.toLowerCase().includes(q))
+            );
+        }
+        
+        return list;
+    },
+    
+    relatedProducts() { 
+        if (!this.selectedProduct) return []; 
+        return this.products.filter(p => p.category === this.selectedProduct.category && p.id !== this.selectedProduct.id); 
+    },
+    
+    cartTotal() { 
+        return this.cartItems.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0); 
+    },
+    
+    userOrders() {
+        if (!this.loggedInUser) return [];
+        return this.orders.filter(o => o.customerPhone === this.loggedInUser.phone).reverse();
+    }
+},
+            methods: {
+                showToast(msg, type='success') { const toastEl = document.getElementById('toastMsg'); if(type==='error'){toastEl.style.background='#ef4444';toastEl.innerHTML=`<i class="fas fa-exclamation-circle"></i><span>${msg}</span>`;}else if(type==='info'){toastEl.style.background='#3b82f6';toastEl.innerHTML=`<i class="fas fa-info-circle"></i><span>${msg}</span>`;}else if(type==='order'){toastEl.style.background='#10b981';toastEl.innerHTML=`<i class="fas fa-check-circle"></i><span>${msg}</span>`;}else{toastEl.style.background='#1f2937';toastEl.innerHTML=`<i class="fas fa-cart-plus text-green-400"></i><span>${msg}</span>`;}toastEl.classList.add('toast-show');setTimeout(()=>toastEl.classList.remove('toast-show'),3000); },
+                handleTouchStart(e,target){ this.touchStartX = e.changedTouches ? e.changedTouches[0].screenX : e.screenX; this.isSwiping=false; },
+                handleTouchEnd(e,target){ this.touchEndX = e.changedTouches ? e.changedTouches[0].screenX : e.screenX; this.handleSwipe(target); },
+                handleSwipe(target){ let diff = this.touchStartX-this.touchEndX; if(Math.abs(diff)>15){ this.isSwiping=true; if(diff>0){ if(target==='banner') this.nextSlide(); if(target==='product') this.nextProductImage(); }else{ if(target==='banner') this.prevSlide(); if(target==='product') this.prevProductImage(); } } },
+                openFullScreen(){ if(!this.isSwiping) this.showFullScreenImage=true; },
+                nextSlide(){ if(this.banners.length){ this.currentBannerIndex=(this.currentBannerIndex+1)%this.banners.length; this.resetBannerTimer(); } },
+                prevSlide(){ if(this.banners.length){ this.currentBannerIndex=(this.currentBannerIndex-1+this.banners.length)%this.banners.length; this.resetBannerTimer(); } },
+                resetBannerTimer(){ if(this.bannerTimer)clearInterval(this.bannerTimer); this.startSlider(); },
+                viewProductDetail(product){ this.selectedProduct = product; this.currentProductImageIndex = 0; window.scrollTo({top:0,behavior:'smooth'}); },
+                getProductSliderImages(){ if(!this.selectedProduct) return []; if(this.selectedProduct.images && Array.isArray(this.selectedProduct.images)) return this.selectedProduct.images; return [this.selectedProduct.image || 'https://placehold.co/300x200?text=Product']; },
+                nextProductImage(){ const imgs = this.getProductSliderImages(); if(imgs.length) this.currentProductImageIndex = (this.currentProductImageIndex+1)%imgs.length; },
+                prevProductImage(){ const imgs = this.getProductSliderImages(); if(imgs.length) this.currentProductImageIndex = (this.currentProductImageIndex-1+imgs.length)%imgs.length; },
+                buyNow(product){ if(product.stockStatus && product.stockStatus !== 'In stock'){ this.showToast('Out of stock','error'); return; } this.addToCart(product); this.openCheckout(); },
+                toggleWishlist(product){ let idx = this.wishlist.findIndex(i=>i.id===product.id); idx>-1? this.wishlist.splice(idx,1):this.wishlist.push(product); localStorage.setItem('sw_wishlist',JSON.stringify(this.wishlist)); this.showToast(`${product.name} ${idx>-1?'removed from':'added to'} wishlist`,'info'); },
+                isInWishlist(product){ return this.wishlist.some(i=>i.id===product.id); },
+                async submitLogin(){
+                    if(!this.loginForm.name.trim()||!this.loginForm.phone.trim()||this.loginForm.phone.length<10){
+                        this.showToast('Valid name & 10-digit mobile required','error'); return;
+                    }
+                    const phone = this.loginForm.phone.trim();
+                    const name  = this.loginForm.name.trim();
+                    // Check if this phone is already registered
+                    const snap = await database.ref('users/' + phone).once('value');
+                    if(snap.exists()){
+                        this.showToast('⚠️ Ye number already registered hai! Alag number use karein.','error');
+                        return;
+                    }
+                    // New user — save and login
+                    const user = { name, phone };
+                    await database.ref('users/' + phone).set(user);
+                    this.loggedInUser = user;
+                    localStorage.setItem('sw_user', JSON.stringify(user));
+                    this.showLoginModal = false;
+                    this.showToast('✅ Account banaya! Welcome ' + name, 'info');
+                    this.loadMyOrders();
+                },
+                logout(){ this.loggedInUser=null; localStorage.removeItem('sw_user'); this.orders=[]; this.previousOrderStatuses={}; this.showToast('Logged out','info'); },
+                addToCart(product){ if(product.stockStatus && product.stockStatus !== 'In stock'){ this.showToast('Out of stock','error'); return; } let img = (product.images && product.images[0]) ? product.images[0] : product.image; let existing = this.cartItems.find(i=>i.id===product.id); existing ? existing.quantity+=1 : this.cartItems.push({ id:product.id, name:product.name, price:product.price, image:img, quantity:1 }); this.showToast(`${product.name} added to cart`); localStorage.setItem('sw_cart',JSON.stringify(this.cartItems)); },
+                updateQuantity(item,delta){ let newQty = item.quantity+delta; if(newQty<=0){ this.cartItems = this.cartItems.filter(i=>i.id!==item.id); }else{ item.quantity = newQty; } localStorage.setItem('sw_cart',JSON.stringify(this.cartItems)); },
+                openCheckout(){ if(!this.cartItems.length) return; if(this.loggedInUser){ this.checkoutForm.name=this.loggedInUser.name; this.checkoutForm.phone=this.loggedInUser.phone; } this.selectedPaymentMethod='COD'; this.showCheckoutModal=true; },
+                async confirmOrder(){ if(!this.checkoutForm.name.trim()||!this.checkoutForm.phone.trim()||this.checkoutForm.phone.length<10||!this.checkoutForm.address.trim()){ alert('All fields required'); return; } const orderItems = this.cartItems.map(it=>({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price) })); const newOrder = { customerName:this.checkoutForm.name.trim(), customerPhone:this.checkoutForm.phone.trim(), customerAddress:this.checkoutForm.address.trim(), userEmail:this.checkoutForm.phone.trim(), items:orderItems, total:this.cartTotal, status:'pending', paymentMethod:this.selectedPaymentMethod, date:new Date().toISOString() }; try{ await database.ref('orders').push(newOrder); if(!this.loggedInUser){ const newUser = { name:newOrder.customerName, phone:newOrder.customerPhone }; await database.ref(`users/${newUser.phone}`).set(newUser); this.loggedInUser=newUser; localStorage.setItem('sw_user',JSON.stringify(newUser)); } this.cartItems=[]; localStorage.removeItem('sw_cart'); this.showCheckoutModal=false; this.selectedProduct=null; this.activeTab='orders'; this.showToast('Order placed!','order'); this.loadMyOrders(); }catch(e){ alert(e.message); } },
+                isEligibleForReturn(date){ if(!date) return false; return Math.ceil((new Date()-new Date(date))/(1000*60*60*24)) <= 6; },
+                initiateReturnExchange(order){ this.activeReturnOrder=order; this.returnPayload={reason:'',action:'',bankDetails:{name:'',bankName:'',accNumber:'',ifsc:'',phone:''}}; this.showReturnPage=true; },
+                async submitReturnExchangeRequest(){ if(!this.returnPayload.reason||!this.returnPayload.action){ alert('Select reason & action'); return; } if(this.returnPayload.action==='Return'){ let b=this.returnPayload.bankDetails; if(!b.name||!b.bankName||!b.accNumber||!b.ifsc||!b.phone){ alert('Bank details required'); return; } } const reqData={ orderId:this.activeReturnOrder.id, customerPhone:this.activeReturnOrder.customerPhone, reason:this.returnPayload.reason, type:this.returnPayload.action, bankDetails:this.returnPayload.action==='Return'?this.returnPayload.bankDetails:null, timestamp:new Date().toISOString() }; await database.ref('return_requests').push(reqData); await database.ref(`orders/${this.activeReturnOrder.id}`).update({ returnRequest:true, status:this.returnPayload.action.toLowerCase()+'_requested' }); this.showReturnPage=false; this.showToast(`${this.returnPayload.action} request submitted`,'order'); this.loadMyOrders(); },
+                async submitRating(orderId,rating){ await database.ref(`orders/${orderId}`).update({ rating }); this.showToast(`Rated "${rating}"! Thank you.`,'order'); },
+                calculateDiscount(orig,curr){ if(!orig||!curr) return 0; return Math.round(((Number(orig)-Number(curr))/Number(orig))*100); },
+                getTrackingProgressWidth(s){ let map={pending:'0%',confirmed:'33%',shipped:'66%',delivered:'100%'}; return map[s]||'0%'; },
+                getTrackingCircleClass(orderStatus,step){ let steps=['pending','confirmed','shipped','delivered']; let idx=steps.indexOf(orderStatus),stepIdx=steps.indexOf(step); if(stepIdx<idx) return 'bg-green-500 text-white border-2 border-green-600'; if(stepIdx===idx) return orderStatus==='delivered'?'bg-green-600 text-white pulse-glow':'bg-blue-600 text-white pulse-glow'; return 'bg-white text-gray-300 border-2 border-gray-200'; },
+                loadProducts(){ database.ref('products').on('value',(snapshot)=>{ let data=snapshot.val(); this.products=data?Object.keys(data).map(key=>({ id:key, ...data[key] })):[]; }); },
+                loadMyOrders(){ if(!this.loggedInUser) return; database.ref('orders').on('value',(snapshot)=>{ let data=snapshot.val(); if(data){ let allOrders=Object.keys(data).map(key=>({ id:key, ...data[key] })); let updatedOrders=allOrders.filter(o=>o.customerPhone===this.loggedInUser.phone).reverse(); updatedOrders.forEach(order=>{ let old=this.previousOrderStatuses[order.id]; if(old && old!==order.status){ let shortId=order.id.slice(-6); if(order.status==='rejected') this.showToast(`Order #${shortId} cancelled`,'error'); else if(order.status==='return_approved'||order.status==='exchange_approved') this.showToast(`Return/Exchange approved for #${shortId}`,'order'); else if(order.status==='return_rejected'||order.status==='exchange_rejected') this.showToast(`Return/Exchange rejected for #${shortId}`,'error'); } this.previousOrderStatuses[order.id]=order.status; }); this.orders=updatedOrders; }else{ this.orders=[]; this.previousOrderStatuses={}; } }); },
+                loadBanners(){ database.ref('banners').on('value',(snapshot)=>{ let val=snapshot.val(); this.banners=val?Object.values(val):['https://placehold.co/800x400?text=ShopSwift+Offers']; }); },
+                loadAdminControls(){ database.ref('admin_settings/payment_link').on('value',(snapshot)=>{ if(snapshot.exists()) this.adminPaymentLink=snapshot.val(); }); database.ref('admin_settings/categories').on('value',(snapshot)=>{ if(snapshot.exists()) this.availableCategories=['All',...snapshot.val()]; }); },
+                formatDate(iso){ if(!iso) return ''; let d=new Date(iso); return d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); },
+                getStatusBadge(status){ const map={ pending:'bg-yellow-100 text-yellow-800', confirmed:'bg-blue-100 text-blue-800', shipped:'bg-purple-100 text-purple-800', delivered:'bg-green-100 text-green-800', rejected:'bg-red-100 text-red-800', return_requested:'bg-orange-100 text-orange-800', exchange_requested:'bg-indigo-100 text-indigo-800', return_approved:'bg-emerald-100 text-emerald-800', exchange_approved:'bg-teal-100 text-teal-800', return_rejected:'bg-rose-100 text-rose-800', exchange_rejected:'bg-pink-100 text-pink-800' }; return map[status]||'bg-gray-100 text-gray-800'; },
+                startSlider(){ this.bannerTimer = setInterval(()=>this.nextSlide(),4000); }
+            },
+            mounted() {
+                let saved = localStorage.getItem('sw_user'); if(saved) this.loggedInUser = JSON.parse(saved);
+                let savedWish = localStorage.getItem('sw_wishlist'); if(savedWish) this.wishlist = JSON.parse(savedWish);
+                let savedCart = localStorage.getItem('sw_cart'); if(savedCart) this.cartItems = JSON.parse(savedCart);
+                this.loadProducts(); this.loadMyOrders(); this.loadBanners(); this.loadAdminControls(); this.startSlider();
+            },
+            destroyed() { if(this.bannerTimer) clearInterval(this.bannerTimer); }
+        });
+    </script>
+</body>
+</html>
