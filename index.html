@@ -262,10 +262,7 @@
 
             <!-- Right: Theme toggle + Wishlist + Cart -->
             <div class="flex items-center gap-2">
-                <!-- Dark/Light Theme Toggle -->
-                <button @click="toggleTheme" class="theme-toggle-btn" :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
-                    <span class="knob">{{ isDark ? '🌙' : '☀️' }}</span>
-                </button>
+
                 <!-- Wishlist icon -->
                 <button @click="activeTab='wishlist'; history.pushState({page:'tab'},'')" class="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-pink-50 transition">
                     <i :class="wishlist.length ? 'fas fa-heart text-red-500' : 'far fa-heart text-gray-500'" class="text-xl"></i>
@@ -368,7 +365,7 @@
                         <span v-if="selectedCategory !== 'All'" @click="selectedCategory = 'All'" class="text-xs text-blue-600 font-semibold cursor-pointer">Clear Filter</span>
                     </div>
                     <div class="overflow-x-auto no-scrollbar pb-1">
-                        <div style="display:grid; grid-auto-flow:column; grid-template-rows:repeat(2,auto); gap:8px 10px; width:max-content;">
+                        <div style="display:flex; flex-direction:row; gap:10px; width:max-content;">
                             <div v-for="cat in availableCategories" :key="cat" @click="selectedCategory = cat"
                                  :class="selectedCategory === cat ? 'border-blue-500 bg-blue-50' : 'border-gray-100 bg-white'"
                                  class="flex flex-col items-center gap-1 px-2.5 pt-2 pb-1.5 rounded-2xl border-2 cursor-pointer transition w-[62px] shadow-sm relative">
@@ -1676,7 +1673,7 @@
                                 </div>
                             </div>
                             <div>
-                                <p style="font-size:10px;font-weight:800;color:#374151;letter-spacing:0.7px;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:5px;"><span>🔒</span> PASSWORD</p>
+                                <p style="font-size:10px;font-weight:800;color:#374151;letter-spacing:0.7px;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:5px;"><span>??</span> PASSWORD</p>
                                 <div style="position:relative;">
                                     <i class="fas fa-lock" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#d1d5db;font-size:12px;"></i>
                                     <input :type="showEmailPassword ? 'text' : 'password'" v-model="emailSignupForm.password" placeholder="Minimum 6 characters" style="width:100%;padding:12px 40px 12px 36px;border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#f857a6';this.style.boxShadow='0 0 0 3px rgba(248,87,166,0.12)'" onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
@@ -3051,4 +3048,5 @@ function closeLiveOfferModal() {
 </script>
 
 </body>
-    </html>
+</html>
+>
