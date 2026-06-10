@@ -197,9 +197,13 @@
         .truck-anim { animation: truckMove 1s ease-in-out infinite; display:inline-block; }
         .bounce-in { animation: bounceIn 0.7s cubic-bezier(0.175,0.885,0.32,1.275) forwards; }
         .heartbeat { animation: heartbeat 1.2s ease-in-out infinite; }
-        .search-suggestions { position:absolute; top:calc(100% + 6px); left:0; right:0; background:var(--bg-card); border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,0.12); z-index:100; overflow:hidden; border:1px solid var(--border-subtle); }
-        .search-suggestion-item { padding:10px 16px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:10px; color:var(--text-label); transition:background 0.15s; }
+        .search-suggestions {
+            position:absolute; top:calc(100% + 2px); left:0; right:0; background:var(--bg-card); border-radius:0 0 16px 16px; box-shadow:0 8px 24px rgba(0,0,0,0.12); z-index:100; overflow:hidden; border:1px solid var(--border-subtle); border-top:none;
+        }
+        .search-suggestion-item { padding:10px 14px; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:10px; color:var(--text-label); transition:background 0.15s; border-bottom:1px solid var(--border-subtle); }
+        .search-suggestion-item:last-child { border-bottom:none; }
         .search-suggestion-item:hover { background:var(--bg-card2); }
+        .search-suggestions { border-radius:0 0 16px 16px !important; }
         .filter-bar { display:flex; gap:8px; overflow-x:auto; padding:2px 0 8px; scrollbar-width:none; }
         .filter-bar::-webkit-scrollbar { display:none; }
         .filter-btn { flex-shrink:0; display:flex; align-items:center; gap:5px; padding:7px 14px; border-radius:20px; border:1.5px solid var(--filter-border); background:var(--filter-bg); font-size:12px; font-weight:600; color:var(--filter-text); cursor:pointer; white-space:nowrap; transition:all 0.2s; }
@@ -314,20 +318,35 @@
                         <!-- Suggestions Dropdown -->
                         <div v-if="showSearchSuggestions && (searchSuggestions.length > 0 || recentSearches.length > 0)" class="search-suggestions">
                             <!-- Recent Searches -->
-                            <div v-if="recentSearches.length > 0 && !searchQuery" class="px-3 pt-3 pb-1">
-                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Recent Searches</p>
-                                <div v-for="rs in recentSearches.slice(0,4)" :key="rs" class="search-suggestion-item rounded-lg" @mousedown="selectSearch(rs)">
-                                    <i class="fas fa-history text-gray-300 text-xs"></i>
-                                    <span>{{ rs }}</span>
-                                    <button @mousedown.stop="removeRecentSearch(rs)" class="ml-auto text-gray-300 hover:text-red-400 text-xs"><i class="fas fa-times"></i></button>
+                            <div v-if="recentSearches.length > 0 && !searchQuery">
+                                <div v-for="rs in recentSearches.slice(0,4)" :key="rs" class="search-suggestion-item" @mousedown="selectSearch(rs)">
+                                    <!-- History icon as thumbnail -->
+                                    <div style="width:36px;height:36px;border-radius:8px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i class="fas fa-history" style="color:#9ca3af;font-size:14px;"></i>
+                                    </div>
+                                    <span style="flex:1;font-size:13px;font-weight:500;color:#1f2937;">{{ rs }}</span>
+                                    <div style="display:flex;align-items:center;gap:6px;">
+                                        <button @mousedown.stop="removeRecentSearch(rs)" style="background:none;border:none;padding:2px 4px;cursor:pointer;color:#d1d5db;" title="Remove"><i class="fas fa-times" style="font-size:11px;"></i></button>
+                                        <i class="fas fa-arrow-up-left" style="color:#9ca3af;font-size:13px;transform:rotate(90deg) scaleX(-1);"></i>
+                                    </div>
                                 </div>
                             </div>
-                            <!-- Live Suggestions -->
+                            <!-- Live Suggestions with product thumbnails -->
                             <div v-if="searchSuggestions.length > 0">
-                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-4 pt-3 pb-1">Suggestions</p>
-                                <div v-for="s in searchSuggestions.slice(0,5)" :key="s" class="search-suggestion-item" @mousedown="selectSearch(s)">
-                                    <i class="fas fa-search text-pink-300 text-xs"></i>
-                                    <span v-html="highlightMatch(s, searchQuery)"></span>
+                                <div v-for="s in searchSuggestions.slice(0,8)" :key="s" class="search-suggestion-item" @mousedown="selectSearch(s)">
+                                    <!-- Product thumbnail -->
+                                    <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#f9fafb;border:1px solid #f0f0f0;">
+                                        <img v-if="getSuggestionImage(s)"
+                                             :src="getDriveImageUrl(getSuggestionImage(s))"
+                                             style="width:100%;height:100%;object-fit:cover;"
+                                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                                        <div style="width:100%;height:100%;display:none;align-items:center;justify-content:center;">
+                                            <i class="fas fa-search" style="color:#d1d5db;font-size:13px;"></i>
+                                        </div>
+                                    </div>
+                                    <span style="flex:1;font-size:13px;font-weight:400;color:#1f2937;" v-html="highlightMatch(s, searchQuery)"></span>
+                                    <!-- Arrow icon (top-left diagonal, like Meesho) -->
+                                    <i style="color:#9ca3af;font-size:15px;flex-shrink:0;">↗</i>
                                 </div>
                             </div>
                         </div>
@@ -1673,7 +1692,7 @@
                                 </div>
                             </div>
                             <div>
-                                <p style="font-size:10px;font-weight:800;color:#374151;letter-spacing:0.7px;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:5px;"><span>??</span> PASSWORD</p>
+                                <p style="font-size:10px;font-weight:800;color:#374151;letter-spacing:0.7px;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:5px;"><span>🔒</span> PASSWORD</p>
                                 <div style="position:relative;">
                                     <i class="fas fa-lock" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#d1d5db;font-size:12px;"></i>
                                     <input :type="showEmailPassword ? 'text' : 'password'" v-model="emailSignupForm.password" placeholder="Minimum 6 characters" style="width:100%;padding:12px 40px 12px 36px;border:1.5px solid #e5e7eb;border-radius:13px;font-size:13px;background:#f9fafb;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='#f857a6';this.style.boxShadow='0 0 0 3px rgba(248,87,166,0.12)'" onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow='none'">
@@ -2379,7 +2398,15 @@
                 highlightMatch(text, query) {
                     if (!query) return text;
                     const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
-                    return text.replace(re, '<strong style="color:#ec4899">$1</strong>');
+                    return text.replace(re, '<strong style="color:#1f2937;font-weight:700;">$1</strong>');
+                },
+                getSuggestionImage(suggestionText) {
+                    // Find a matching product image for the suggestion text
+                    if (!this.products || !suggestionText) return null;
+                    const lower = suggestionText.toLowerCase();
+                    const match = this.products.find(p => p.name && p.name.toLowerCase().includes(lower.split(' ')[0]));
+                    if (!match) return null;
+                    return (match.images && match.images.length) ? match.images[0] : (match.image || null);
                 },
                 startVoiceSearch() {
                     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -3049,4 +3076,3 @@ function closeLiveOfferModal() {
 
 </body>
 </html>
->
