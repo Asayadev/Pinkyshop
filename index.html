@@ -292,21 +292,113 @@
             </div>
         </div>
 
-        <div v-show="activeTab === 'products'">
+        <!-- ===== SEARCH RESULTS PAGE ===== -->
+        <div v-if="showSearchResults" class="pb-24">
+
+            <!-- Header -->
+            <div class="flex items-center gap-3 px-1 mb-4">
+                <button @click="showSearchResults=false; searchQuery=''; window.scrollTo({top:0,behavior:'smooth'})"
+                        class="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full bg-white border border-gray-200 shadow-sm text-gray-600 hover:bg-pink-50 hover:text-pink-500 transition">
+                    <i class="fas fa-arrow-left text-sm"></i>
+                </button>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[11px] text-gray-400 font-medium leading-tight">Search Results for</p>
+                    <p class="text-sm font-black text-gray-800 truncate">"{{ searchQuery }}"</p>
+                </div>
+                <span class="flex-shrink-0 bg-pink-100 text-pink-600 text-[11px] font-black px-3 py-1 rounded-full">
+                    {{ searchResults.length }} found
+                </span>
+            </div>
+
+            <!-- No Results -->
+            <div v-if="searchResults.length === 0" class="flex flex-col items-center justify-center py-20 text-center px-6">
+                <div class="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                    <i class="fas fa-search text-3xl text-gray-300"></i>
+                </div>
+                <h3 class="text-base font-black text-gray-700 mb-1">No items found</h3>
+                <p class="text-xs text-gray-400 mb-6">We couldn't find anything matching<br><strong class="text-gray-600">"{{ searchQuery }}"</strong></p>
+                <button @click="showSearchResults=false; searchQuery=''; window.scrollTo({top:0,behavior:'smooth'})"
+                        class="px-6 py-2.5 bg-pink-500 hover:bg-pink-600 text-white text-sm font-black rounded-2xl shadow-md shadow-pink-200 transition active:scale-95">
+                    <i class="fas fa-home mr-1.5"></i> Go Back Home
+                </button>
+            </div>
+
+            <!-- Results Grid -->
+            <div v-else class="grid grid-cols-2 gap-3 border-t border-l border-gray-100">
+                <div v-for="product in searchResults" :key="'sr_'+product.id"
+                     class="relative bg-white border-b border-r border-gray-100 cursor-pointer active:bg-gray-50"
+                     @click="viewProductDetail(product); showSearchResults=false;">
+
+                    <!-- Product Image -->
+                    <div class="relative overflow-hidden bg-gray-50" style="aspect-ratio:1/1;">
+                        <img :src="getDriveImageUrl(product.images && product.images.length ? product.images[0] : (product.image || 'https://placehold.co/300x300?text=P'))"
+                             :alt="product.name"
+                             :class="{'opacity-40 grayscale': product.stockStatus && product.stockStatus !== 'In stock'}"
+                             class="w-full h-full object-cover"
+                             onerror="this.src='https://placehold.co/300x300?text=P'">
+                        <!-- Wishlist -->
+                        <button @click.stop="toggleWishlist(product)"
+                                class="absolute top-2 right-2 bg-white w-8 h-8 rounded-full shadow flex items-center justify-center z-10">
+                            <i :class="isInWishlist(product) ? 'fas fa-heart text-red-500' : 'far fa-heart text-gray-400'" class="text-sm"></i>
+                        </button>
+                        <!-- Badge -->
+                        <div v-if="product.badge" class="absolute top-2 left-2 z-10 bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded">
+                            {{ product.badge }}
+                        </div>
+                        <!-- Out of Stock -->
+                        <div v-if="product.stockStatus && product.stockStatus !== 'In stock'"
+                             class="absolute inset-0 flex items-center justify-center bg-white/50">
+                            <span class="bg-red-600/90 text-white text-[10px] font-black px-3 py-1 rounded-full shadow">OUT OF STOCK</span>
+                        </div>
+                    </div>
+
+                    <!-- Info -->
+                    <div class="px-2.5 pt-2 pb-3">
+                        <p class="text-gray-800 text-[13px] font-semibold leading-snug mb-1" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ product.name }}</p>
+
+                        <div class="flex items-baseline gap-1.5 flex-wrap mb-0.5">
+                            <span class="text-[17px] font-black text-gray-900">₹{{ getEffectivePrice(product) }}</span>
+                            <span v-if="getEffectiveOriginal(product) && getEffectiveOriginal(product) > getEffectivePrice(product)"
+                                  class="text-[13px] text-gray-400 line-through font-medium">{{ getEffectiveOriginal(product) }}</span>
+                            <span v-if="getTotalDiscount(product) > 0"
+                                  class="text-[13px] font-bold text-green-600">{{ getTotalDiscount(product) }}% off</span>
+                        </div>
+
+                        <div v-if="getProductAvgRating(product.id)" class="flex items-center gap-1.5 mb-2">
+                            <span class="rating-pill">{{ getProductAvgRating(product.id) }} <i class="fas fa-star text-[9px]"></i></span>
+                            <span class="text-[11px] text-gray-400">{{ getProductReviewCount(product.id) }}</span>
+                        </div>
+
+                        <button @click.stop="addToCart(product)"
+                                :disabled="product.stockStatus && product.stockStatus !== 'In stock'"
+                                class="w-full py-1.5 rounded-xl text-[11px] font-black transition active:scale-95"
+                                :class="product.stockStatus && product.stockStatus !== 'In stock'
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : 'bg-pink-500 hover:bg-pink-600 text-white shadow-sm shadow-pink-200'">
+                            <i class="fas fa-cart-plus text-[10px] mr-1"></i>
+                            {{ product.stockStatus && product.stockStatus !== 'In stock' ? 'Out of Stock' : 'Add to Cart' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- ===== END SEARCH RESULTS PAGE ===== -->
+
+        <div v-show="activeTab === 'products'" v-if="!showSearchResults">
             
             <div v-if="!selectedProduct" class="space-y-4 mb-5">
                 
                 <div class="flex justify-center w-full">
                     <div class="relative w-full max-w-md mx-auto">
                         <!-- Search Input -->
-                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-pink-400 text-sm z-10"></i>
+                        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-pink-400 text-sm z-10 cursor-pointer" @click="executeSearch"></i>
                         <input
                             type="text"
                             v-model="searchQuery"
                             @input="onSearchInput"
                             @focus="showSearchSuggestions = true"
                             @blur="setTimeout(()=>showSearchSuggestions=false, 200)"
-                            @keyup.enter="commitSearch"
+                            @keyup.enter="executeSearch"
                             placeholder="Search products, brands..."
                             class="pl-10 pr-12 py-3 border-2 border-pink-100 rounded-2xl w-full text-xs bg-white shadow-sm focus:border-pink-400 focus:ring-2 focus:ring-pink-100 transition font-medium"
                         >
@@ -680,8 +772,7 @@
                                 <!-- Review Photo -->
                                 <div v-if="rev.reviewImage" class="mb-2">
                                     <img :src="getDriveImageUrl(rev.reviewImage)"
-                                         class="w-20 h-20 object-cover rounded-xl border border-gray-100 cursor-pointer hover:scale-105 transition shadow-sm"
-                                         @click="selectedProduct.images=[getDriveImageUrl(rev.reviewImage)]; currentProductImageIndex=0;"
+                                         class="w-20 h-20 object-cover rounded-xl border border-gray-100 transition shadow-sm"
                                          onerror="this.style.display='none'">
                                     <p class="text-[9px] text-gray-400 mt-1"><i class="fas fa-image mr-0.5"></i>Review photo</p>
                                 </div>
@@ -810,6 +901,26 @@
                         <div class="flex items-center gap-2"><button @click="updateQuantity(item, -1)" class="w-6 h-6 rounded bg-gray-100 text-xs font-bold">-</button><span class="text-xs font-bold w-4 text-center">{{ item.quantity }}</span><button @click="updateQuantity(item, 1)" class="w-6 h-6 rounded bg-gray-100 text-xs font-bold">+</button></div>
                     </div>
                     <div class="pt-3 flex justify-between items-center font-bold text-lg"><span>Total Bill:</span><span class="text-blue-700">₹{{ cartTotal.toFixed(2) }}</span></div>
+                    <!-- Delivery Charge Info -->
+                    <div v-if="deliverySettings.isActive">
+                        <div v-if="deliveryChargeApplied > 0" class="mt-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex items-start gap-2">
+                            <i class="fas fa-motorcycle text-amber-500 mt-0.5 text-sm flex-shrink-0"></i>
+                            <div>
+                                <p class="text-xs font-black text-amber-700">Delivery Charge: ₹{{ deliverySettings.deliveryCharge }}</p>
+                                <p class="text-[11px] text-amber-600 mt-0.5">
+                                    ₹{{ (deliverySettings.minOrderLimit - cartTotal).toFixed(0) }} ka samaan aur jodiyen — delivery <span class="font-black">FREE</span> ho jayegi! 🎉
+                                </p>
+                            </div>
+                        </div>
+                        <div v-else class="mt-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2 flex items-center gap-2">
+                            <i class="fas fa-check-circle text-green-500 text-sm flex-shrink-0"></i>
+                            <p class="text-xs font-bold text-green-700">🎉 Free Delivery! (Bill ₹{{ deliverySettings.minOrderLimit }}+ hai)</p>
+                        </div>
+                        <div v-if="deliveryChargeApplied > 0" class="flex justify-between items-center font-black text-base mt-2 pt-2 border-t">
+                            <span>Grand Total:</span>
+                            <span class="text-pink-600">₹{{ grandTotal.toFixed(2) }}</span>
+                        </div>
+                    </div>
                     <button @click="openCheckout" class="w-full mt-4 bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md"><i class="fas fa-truck"></i> Proceed to Checkout</button>
                 </div>
             </div>
@@ -832,28 +943,36 @@
                     </button>
                 </div>
 
-                <!-- Horizontal Scroll Slider -->
-                <div class="flex gap-3 overflow-x-auto no-scrollbar pb-2 px-1">
+                <!-- 2-Column Vertical Grid -->
+                <div class="grid grid-cols-2 gap-3 px-1 pb-2">
                     <div v-for="product in suggestedProducts" :key="'sug_' + product.id"
-                         class="flex-shrink-0 w-36 bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm"
-                         style="transition: transform 0.15s; cursor: pointer;"
-                         @click="viewProductDetail(product)">
+                         class="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm active:scale-95"
+                         style="cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;"
+                         @click="viewProductDetail(product)"
+                         @mouseenter="$event.currentTarget.style.boxShadow='0 8px 20px -4px rgba(236,72,153,0.2)'; $event.currentTarget.style.transform='translateY(-2px)'"
+                         @mouseleave="$event.currentTarget.style.boxShadow=''; $event.currentTarget.style.transform=''">
 
                         <!-- Product Image -->
-                        <div class="relative h-28 bg-gradient-to-br from-gray-50 to-slate-50 flex items-center justify-center p-2 overflow-hidden">
+                        <div class="relative h-32 flex items-center justify-center p-2 overflow-hidden"
+                             style="background: linear-gradient(135deg,#fff0f6 0%,#f3e8ff 100%);">
                             <!-- Discount Badge -->
                             <div v-if="getTotalDiscount(product) > 0"
-                                 class="absolute top-2 left-2 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full z-10 shadow-sm">
-                                {{ getTotalDiscount(product) }}% OFF
+                                 class="absolute top-2 left-2 z-10 flex items-center gap-0.5 bg-red-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm">
+                                <i class="fas fa-bolt text-[7px]"></i> {{ getTotalDiscount(product) }}% OFF
                             </div>
                             <!-- Badge -->
                             <div v-if="product.badge && !getTotalDiscount(product)"
-                                 class="absolute top-2 left-2 bg-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full z-10">
+                                 class="absolute top-2 left-2 bg-gradient-to-r from-orange-400 to-pink-400 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full z-10">
                                 {{ product.badge }}
                             </div>
+                            <!-- Wishlist heart -->
+                            <button @click.stop="toggleWishlist(product)"
+                                class="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-white shadow flex items-center justify-center active:scale-90 transition">
+                                <i :class="isInWishlist(product) ? 'fas fa-heart text-red-500' : 'far fa-heart text-gray-300'" class="text-[11px]"></i>
+                            </button>
                             <img :src="getDriveImageUrl(product.images && product.images.length ? product.images[0] : (product.image || 'https://placehold.co/200x200?text=P'))"
                                  :alt="product.name"
-                                 class="h-24 w-full object-contain"
+                                 class="h-28 w-full object-contain drop-shadow-sm"
                                  onerror="this.src='https://placehold.co/200x200?text=P'">
                         </div>
 
@@ -869,21 +988,30 @@
                             <div class="flex items-baseline gap-1 flex-wrap">
                                 <span class="text-sm font-black text-gray-900">₹{{ getEffectivePrice(product) }}</span>
                                 <span v-if="getEffectiveOriginal(product) && Number(getEffectiveOriginal(product)) > Number(getEffectivePrice(product))"
-                                      class="text-[10px] text-gray-400 line-through">₹{{ getEffectiveOriginal(product) }}</span>
+                                      class="text-[9px] text-gray-400 line-through">₹{{ getEffectiveOriginal(product) }}</span>
                             </div>
 
                             <!-- Rating -->
                             <div v-if="getProductAvgRating(product.id)" class="flex items-center gap-1">
-                                <span class="inline-flex items-center gap-0.5 bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                                <span class="inline-flex items-center gap-0.5 bg-green-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
                                     {{ getProductAvgRating(product.id) }} <i class="fas fa-star text-[7px]"></i>
                                 </span>
                             </div>
 
-                            <!-- Add Button -->
-                            <button @click.stop="addToCartFromSuggestion(product)"
-                                class="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white text-[11px] font-black py-1.5 rounded-xl transition active:scale-95 flex items-center justify-center gap-1 shadow-sm shadow-pink-200">
-                                <i class="fas fa-plus text-[9px]"></i> Add
-                            </button>
+                            <!-- Buttons Row -->
+                            <div class="flex gap-1.5">
+                                <!-- Add to Cart -->
+                                <button @click.stop="addToCartFromSuggestion(product)"
+                                    class="flex-1 bg-pink-50 border border-pink-200 text-pink-600 text-[10px] font-black py-1.5 rounded-xl transition active:scale-95 flex items-center justify-center gap-1">
+                                    <i class="fas fa-cart-plus text-[9px]"></i> Cart
+                                </button>
+                                <!-- Buy Now → direct checkout -->
+                                <button @click.stop="buyNow(product)"
+                                    class="flex-1 text-white text-[10px] font-black py-1.5 rounded-xl transition active:scale-95 flex items-center justify-center gap-1"
+                                    style="background: linear-gradient(135deg,#ec4899 0%,#a855f7 100%); box-shadow:0 3px 8px -2px rgba(236,72,153,0.4);">
+                                    <i class="fas fa-bolt text-[9px]"></i> Buy
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1775,14 +1903,28 @@
                     <div class="bg-gray-50 rounded-2xl p-3">
                         <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Order Summary</p>
                         <div class="space-y-1.5 mb-2">
-                            <div v-for="item in cartItems" :key="item.cartKey" class="flex justify-between text-xs text-gray-700">
+                            <div v-for="item in (isBuyNowMode && buyNowItem ? buyNowItem : cartItems)" :key="item.cartKey" class="flex justify-between text-xs text-gray-700">
                                 <span class="truncate max-w-[65%] font-medium">{{ item.name }} <span class="text-gray-400">×{{ item.quantity }}</span></span>
                                 <span class="font-bold">₹{{ (getEffectivePrice(item) * item.quantity) }}</span>
                             </div>
                         </div>
-                        <div class="border-t pt-2 flex justify-between font-black text-sm">
-                            <span>Total</span>
-                            <span class="text-pink-600">₹{{ cartTotal.toFixed(2) }}</span>
+                        <div class="border-t pt-2 space-y-1">
+                            <div class="flex justify-between text-xs text-gray-600">
+                                <span>Item Total</span>
+                                <span class="font-bold">₹{{ cartTotal.toFixed(2) }}</span>
+                            </div>
+                            <div v-if="deliverySettings.isActive" class="flex justify-between text-xs" :class="deliveryChargeApplied > 0 ? 'text-amber-700' : 'text-green-600'">
+                                <span class="font-semibold flex items-center gap-1">
+                                    <i class="fas fa-motorcycle text-xs"></i>
+                                    Delivery Charge
+                                    <span v-if="deliveryChargeApplied === 0" class="text-[10px] font-black bg-green-100 text-green-700 px-1.5 rounded-full">FREE</span>
+                                </span>
+                                <span class="font-bold">{{ deliveryChargeApplied > 0 ? '₹' + deliveryChargeApplied.toFixed(2) : '₹0.00' }}</span>
+                            </div>
+                            <div class="flex justify-between font-black text-sm pt-1 border-t">
+                                <span>Grand Total</span>
+                                <span class="text-pink-600">₹{{ grandTotal.toFixed(2) }}</span>
+                            </div>
                         </div>
                     </div>
 
@@ -1838,7 +1980,7 @@
                                 </div>
                                 <div>
                                     <p class="text-xs font-bold text-indigo-800">Step 1 — Scan & Pay</p>
-                                    <p class="text-[10px] text-gray-400">Pay ₹{{ cartTotal.toFixed(2) }} using any UPI app</p>
+                                    <p class="text-[10px] text-gray-400">Pay ₹{{ grandTotal.toFixed(2) }} using any UPI app</p>
                                 </div>
                             </div>
 
@@ -1870,7 +2012,7 @@
                                 </button>
                                 <!-- Amount reminder -->
                                 <div class="w-full bg-indigo-600 text-white text-center rounded-xl py-2 font-black text-sm">
-                                    Pay exactly ₹{{ cartTotal.toFixed(2) }}
+                                    Pay exactly ₹{{ grandTotal.toFixed(2) }}
                                 </div>
                             </div>
 
@@ -1914,14 +2056,14 @@
                     <div class="flex items-center justify-between bg-pink-50 border border-pink-100 rounded-2xl px-4 py-3">
                         <div>
                             <p class="text-[11px] text-gray-400 font-medium">Amount to Verify</p>
-                            <p class="text-xl font-black text-pink-600">₹{{ cartTotal.toFixed(2) }}</p>
+                            <p class="text-xl font-black text-pink-600">₹{{ grandTotal.toFixed(2) }}</p>
                         </div>
                         <div class="bg-pink-500 text-white text-xs font-bold px-3 py-1.5 rounded-full">Online Payment</div>
                     </div>
 
                     <!-- Order items mini -->
                     <div class="bg-gray-50 rounded-2xl p-3 space-y-1">
-                        <div v-for="item in cartItems" :key="item.cartKey" class="flex justify-between text-xs text-gray-600">
+                        <div v-for="item in (isBuyNowMode && buyNowItem ? buyNowItem : cartItems)" :key="item.cartKey" class="flex justify-between text-xs text-gray-600">
                             <span class="truncate max-w-[65%]">{{ item.name }} ×{{ item.quantity }}</span>
                             <span class="font-bold text-gray-800">₹{{ getEffectivePrice(item) * item.quantity }}</span>
                         </div>
@@ -2001,6 +2143,202 @@
             </div>
         </div>
 
+        <!-- ===== GLOBAL FOOTER ===== -->
+        <footer class="mt-12 mb-24 px-4 py-6 border-t border-gray-200 text-center text-xs text-gray-500 bg-white rounded-t-2xl">
+            <div class="flex items-center justify-center gap-1.5 mb-2">
+                <span class="w-5 h-5 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
+                    <i class="fas fa-shopping-bag text-white" style="font-size:8px;"></i>
+                </span>
+                <span class="font-black text-gray-700 text-sm tracking-tight">Pinkkart</span>
+            </div>
+            <p class="mb-2 text-gray-400">© 2026 Pinkkart. All Rights Reserved.</p>
+            <div class="flex items-center justify-center gap-4">
+                <a href="#" @click.prevent="showTermsModal = true"
+                   class="text-pink-500 font-semibold hover:text-pink-600 transition underline underline-offset-2">
+                    Terms of Service
+                </a>
+                <span class="text-gray-300">|</span>
+                <a href="#" @click.prevent="showPrivacyModal = true"
+                   class="text-pink-500 font-semibold hover:text-pink-600 transition underline underline-offset-2">
+                    Privacy Policy
+                </a>
+            </div>
+            <p class="mt-3 text-[10px] text-gray-300">Made with ❤️ for you</p>
+        </footer>
+
+        <!-- ===== TERMS OF SERVICE MODAL ===== -->
+        <div v-if="showTermsModal"
+             class="fixed inset-0 z-50 flex items-center justify-center px-4"
+             style="background:rgba(0,0,0,0.5); backdrop-filter:blur(4px);"
+             @click.self="showTermsModal = false">
+            <div class="bg-white w-full max-w-lg rounded-2xl flex flex-col overflow-hidden shadow-2xl"
+                 style="max-height:80vh;">
+
+                <!-- Header -->
+                <div class="flex items-center justify-between px-5 py-4 bg-pink-50 border-b border-pink-100 flex-shrink-0">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-sm">
+                            <i class="fas fa-file-contract text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-black text-gray-800 leading-tight">Terms of Service</p>
+                            <p class="text-[10px] text-pink-400 font-medium">Last Updated: June 2026</p>
+                        </div>
+                    </div>
+                    <button @click="showTermsModal = false"
+                            class="w-8 h-8 flex items-center justify-center rounded-full bg-white border border-pink-100 text-gray-400 hover:text-gray-600 transition shadow-sm">
+                        <i class="fas fa-times text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Body -->
+                <div class="overflow-y-auto flex-1 px-6 py-5 text-sm text-gray-600 space-y-4">
+                    <p class="text-[11px] text-gray-400 italic">Please read these terms carefully. By using Pinkkart, you agree to be bound by them.</p>
+
+                    <div>
+                        <p class="font-black text-gray-800 mb-1 flex items-center gap-1.5">
+                            <span class="w-5 h-5 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center text-[10px] font-black flex-shrink-0">1</span>
+                            Account Eligibility
+                        </p>
+                        <p class="text-[12px] leading-relaxed pl-7">You must provide accurate personal information when creating an account. You are responsible for maintaining the confidentiality of your login credentials. Pinkkart reserves the right to suspend accounts found providing false or misleading information.</p>
+                    </div>
+
+                    <div>
+                        <p class="font-black text-gray-800 mb-1 flex items-center gap-1.5">
+                            <span class="w-5 h-5 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center text-[10px] font-black flex-shrink-0">2</span>
+                            Orders and Pricing
+                        </p>
+                        <p class="text-[12px] leading-relaxed pl-7">All orders are subject to product availability. Prices may change without prior notice. Pinkkart reserves the right to cancel any order suspected of fraud, abuse, or placed with incorrect pricing due to a technical error.</p>
+                    </div>
+
+                    <div>
+                        <p class="font-black text-gray-800 mb-1 flex items-center gap-1.5">
+                            <span class="w-5 h-5 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center text-[10px] font-black flex-shrink-0">3</span>
+                            Payments &amp; Security
+                        </p>
+                        <p class="text-[12px] leading-relaxed pl-7">We accept Cash on Delivery (COD), UPI, and major debit/credit cards. All online transactions are processed through secure, encrypted payment gateways. Pinkkart does not store your card details on our servers.</p>
+                    </div>
+
+                    <div>
+                        <p class="font-black text-gray-800 mb-1 flex items-center gap-1.5">
+                            <span class="w-5 h-5 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center text-[10px] font-black flex-shrink-0">4</span>
+                            Shipping &amp; Delivery
+                        </p>
+                        <p class="text-[12px] leading-relaxed pl-7">Delivery timelines are estimates and may vary based on your location, product availability, and logistics partner. Pinkkart is not liable for delays caused by third-party courier services, natural events, or circumstances beyond our control.</p>
+                    </div>
+
+                    <div>
+                        <p class="font-black text-gray-800 mb-1 flex items-center gap-1.5">
+                            <span class="w-5 h-5 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center text-[10px] font-black flex-shrink-0">5</span>
+                            Returns &amp; Refunds
+                        </p>
+                        <p class="text-[12px] leading-relaxed pl-7">We offer a 7-day return policy from the date of delivery. Products must be unused, undamaged, and returned in their original packaging with all tags intact. Refunds will be processed within 5–7 business days after the item is received and inspected.</p>
+                    </div>
+
+                    <div>
+                        <p class="font-black text-gray-800 mb-1 flex items-center gap-1.5">
+                            <span class="w-5 h-5 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center text-[10px] font-black flex-shrink-0">6</span>
+                            Limitation of Liability
+                        </p>
+                        <p class="text-[12px] leading-relaxed pl-7">Pinkkart shall not be held liable for any indirect, incidental, special, or consequential damages arising from the use of our platform, products, or services. Our total liability in any matter is limited to the amount paid for the specific order in question.</p>
+                    </div>
+
+                    <p class="text-[11px] text-gray-400 italic border-t border-gray-100 pt-3">Pinkkart reserves the right to update these terms at any time. Continued use of the platform constitutes acceptance of revised terms.</p>
+                </div>
+
+                <!-- Footer -->
+                <div class="px-5 py-4 bg-gray-50 border-t border-gray-100 flex-shrink-0">
+                    <button @click="showTermsModal = false"
+                            class="w-full py-3 rounded-xl font-black text-sm text-white transition active:scale-95 flex items-center justify-center gap-2"
+                            style="background:linear-gradient(135deg,#ec4899 0%,#a855f7 100%); box-shadow:0 6px 20px -4px rgba(236,72,153,0.4);">
+                        <i class="fas fa-check-circle text-sm"></i> I Understand &amp; Accept
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- ===== END TERMS MODAL ===== -->
+
+        <!-- ===== PRIVACY POLICY MODAL ===== -->
+        <div v-if="showPrivacyModal"
+             class="fixed inset-0 z-50 flex items-center justify-center px-4"
+             style="background:rgba(0,0,0,0.5); backdrop-filter:blur(4px);"
+             @click.self="showPrivacyModal = false">
+            <div class="bg-white w-full max-w-lg rounded-2xl flex flex-col overflow-hidden shadow-2xl"
+                 style="max-height:80vh;">
+
+                <!-- Header -->
+                <div class="flex items-center justify-between px-5 py-4 bg-pink-50 border-b border-pink-100 flex-shrink-0">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-sm">
+                            <i class="ri-shield-user-line text-white text-sm" style="font-size:16px;"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-black text-gray-800 leading-tight">Privacy Policy</h3>
+                            <p class="text-[10px] text-gray-400 font-medium">Last Updated: June 2026</p>
+                        </div>
+                    </div>
+                    <button @click="showPrivacyModal = false"
+                            class="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition shadow-sm">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Scrollable Body -->
+                <div class="overflow-y-auto p-6 text-sm text-gray-600 space-y-4 flex-1">
+                    <p class="text-gray-700 font-medium">Welcome to <span class="font-black text-pink-500">Pinkkart</span>! We value your privacy and are committed to protecting your personal information. This policy explains how we collect, use, and safeguard your data.</p>
+
+                    <div>
+                        <h4 class="font-black text-gray-800 text-sm mb-1.5 flex items-center gap-2">
+                            <span class="w-5 h-5 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0">1</span>
+                            Information We Collect
+                        </h4>
+                        <p class="pl-7 text-[12px] leading-relaxed">We collect personal details necessary to process your orders, including your <strong>name</strong>, <strong>shipping address</strong>, <strong>email address</strong>, <strong>phone number</strong>, and <strong>payment details</strong>.</p>
+                    </div>
+
+                    <div>
+                        <h4 class="font-black text-gray-800 text-sm mb-1.5 flex items-center gap-2">
+                            <span class="w-5 h-5 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0">2</span>
+                            How We Use Your Data
+                        </h4>
+                        <p class="pl-7 text-[12px] leading-relaxed">Your data is used to manage your account, process and deliver orders, send order tracking SMS/emails, and continuously improve our services and experience.</p>
+                    </div>
+
+                    <div>
+                        <h4 class="font-black text-gray-800 text-sm mb-1.5 flex items-center gap-2">
+                            <span class="w-5 h-5 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0">3</span>
+                            Data Protection &amp; Security
+                        </h4>
+                        <p class="pl-7 text-[12px] leading-relaxed">We use industry-standard <strong>SSL encryption</strong> and secure third-party payment gateways to protect your data. Your raw payment credentials are <strong>never stored</strong> on our servers.</p>
+                    </div>
+
+                    <div>
+                        <h4 class="font-black text-gray-800 text-sm mb-1.5 flex items-center gap-2">
+                            <span class="w-5 h-5 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0">4</span>
+                            Third-Party Sharing
+                        </h4>
+                        <p class="pl-7 text-[12px] leading-relaxed">We only share necessary information (such as your address and phone number) with trusted <strong>logistics and courier partners</strong> to deliver your products. We <strong>never sell or rent</strong> your personal information to any third party.</p>
+                    </div>
+
+                    <div>
+                        <h4 class="font-black text-gray-800 text-sm mb-1.5 flex items-center gap-2">
+                            <span class="w-5 h-5 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0">5</span>
+                            Cookies
+                        </h4>
+                        <p class="pl-7 text-[12px] leading-relaxed">We use cookies to remember your login session and keep your selected products saved in your shopping cart for a seamless experience.</p>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="px-5 py-4 bg-gray-50 border-t border-gray-100 flex-shrink-0">
+                    <button @click="showPrivacyModal = false"
+                            class="w-full py-3 rounded-xl font-black text-sm text-white bg-pink-500 hover:bg-pink-600 transition active:scale-95 flex items-center justify-center gap-2 shadow-md shadow-pink-200">
+                        <i class="fas fa-check-circle text-sm"></i> Accept &amp; Close
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- ===== END PRIVACY POLICY MODAL ===== -->
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
@@ -2031,6 +2369,8 @@
                 emailAuthLoading: false,
                 showEmailPassword: false,
                 showCheckoutModal: false,
+                showTermsModal: false,
+                showPrivacyModal: false,
                 authMode: 'login',
                 pendingAction: null,
                 signupForm: { name: '', phone: '' },
@@ -2074,6 +2414,8 @@
                 globalReviews: [],
                 // Order Success
                 showOrderSuccess: false,
+                buyNowItem: null,
+                isBuyNowMode: false,
                 // Avatar
                 userAvatarUrl: '',
                 isUploadingAvatar: false,
@@ -2091,6 +2433,8 @@
                 searchSuggestions: [],
                 recentSearches: JSON.parse(localStorage.getItem('pk_recent_searches') || '[]'),
                 isListening: false,
+                showSearchResults: false,
+                searchResults: [],
                 // Theme
                 isDark: false,
                 // Profile
@@ -2109,6 +2453,8 @@
                 filterDiscount: false,
                 filterInStock: false,
                 globalDiscount: 0,
+                // Delivery settings from app_settings/delivery
+                deliverySettings: { deliveryCharge: 0, isActive: false, minOrderLimit: 0 },
                 sortOptions: [
                     { val:'price_asc', label:'Price: Low to High', icon:'fas fa-sort-amount-up' },
                     { val:'price_desc', label:'Price: High to Low', icon:'fas fa-sort-amount-down' },
@@ -2182,10 +2528,21 @@
                     return this.products.filter(p => p.category === this.selectedProduct.category && p.id !== this.selectedProduct.id); 
                 },
                 cartTotal() { 
-                    return this.cartItems.reduce((sum, item) => {
+                    const items = this.isBuyNowMode && this.buyNowItem ? this.buyNowItem : this.cartItems;
+                    return items.reduce((sum, item) => {
                         const disc = this.globalDiscount > 0 ? Math.round(Number(item.price) * (1 - this.globalDiscount / 100)) : Number(item.price);
                         return sum + disc * item.quantity;
                     }, 0); 
+                },
+                deliveryChargeApplied() {
+                    const ds = this.deliverySettings;
+                    if (!ds.isActive) return 0;
+                    const items = this.isBuyNowMode && this.buyNowItem ? this.buyNowItem : this.cartItems;
+                    if (items.length === 0) return 0;
+                    return this.cartTotal < ds.minOrderLimit ? ds.deliveryCharge : 0;
+                },
+                grandTotal() {
+                    return this.cartTotal + this.deliveryChargeApplied;
                 },
                 userOrders() {
                     if (!this.loggedInUser) return [];
@@ -2382,10 +2739,34 @@
                     this.searchQuery = val;
                     this.showSearchSuggestions = false;
                     this.saveRecentSearch(val);
+                    this.executeSearch();
                 },
                 commitSearch() {
                     if (this.searchQuery.trim()) this.saveRecentSearch(this.searchQuery.trim());
                     this.showSearchSuggestions = false;
+                },
+                executeSearch() {
+                    const q = this.searchQuery.trim();
+                    if (!q) return;
+                    this.saveRecentSearch(q);
+                    this.showSearchSuggestions = false;
+                    const lower = q.toLowerCase();
+                    const filtered = this.products.filter(p =>
+                        (p.name && p.name.toLowerCase().includes(lower)) ||
+                        (p.category && p.category.toLowerCase().includes(lower))
+                    );
+                    filtered.sort((a, b) => {
+                        const an = (a.name || '').toLowerCase();
+                        const bn = (b.name || '').toLowerCase();
+                        const rankA = an === lower ? 0 : an.startsWith(lower) ? 1 : 2;
+                        const rankB = bn === lower ? 0 : bn.startsWith(lower) ? 1 : 2;
+                        return rankA - rankB;
+                    });
+                    this.searchResults = filtered;
+                    this.showSearchResults = true;
+                    this.selectedProduct = null;
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    history.pushState({ page: 'search' }, '');
                 },
                 saveRecentSearch(val) {
                     this.recentSearches = [val, ...this.recentSearches.filter(r => r !== val)].slice(0, 6);
@@ -2453,14 +2834,37 @@
                 prevProductImage(){ const imgs = this.getProductSliderImages(); if(imgs.length) this.currentProductImageIndex = (this.currentProductImageIndex-1+imgs.length)%imgs.length; },
                 buyNow(product){
                     if(product.stockStatus && product.stockStatus !== 'In stock'){ this.showToast('Out of stock','error'); return; }
+                    // Size check if product has sizes
+                    if(product.sizes && product.sizes.filter(s => s !== 'Free Size').length > 0 && !this.selectedSize){
+                        this.showToast('पहले size select करें!','error'); return;
+                    }
+                    // buyNow ke liye temporary item banao — cart me ADD mat karo
+                    let img = (product.images && product.images[0]) ? product.images[0] : product.image;
+                    let sizeLabel = (product.sizes && product.sizes.length) ? (this.selectedSize || 'Free Size') : 'Free Size';
+                    this.buyNowItem = [{
+                        cartKey: product.id + '_buynow',
+                        id: product.id,
+                        name: product.name + (sizeLabel && sizeLabel !== 'Free Size' ? ' (' + sizeLabel + ')' : ''),
+                        price: product.price,
+                        image: img,
+                        quantity: 1,
+                        size: sizeLabel,
+                        shopkeeperName: product.shopkeeperName || product.shopkeeper || product.sellerName || '',
+                        shopkeeperId: product.shopkeeperId || product.sellerId || ''
+                    }];
                     if(!this.loggedInUser){
-                        this.addToCart(product);
-                        this.pendingAction = 'checkout';
+                        this.pendingAction = 'buynow';
                         this.authMode = 'signup';
                         this.showLoginModal = true;
                         return;
                     }
-                    this.addToCart(product); this.openCheckout();
+                    this.openBuyNowCheckout();
+                },
+                openBuyNowCheckout(){
+                    if(!this.buyNowItem || !this.buyNowItem.length) return;
+                    if(this.loggedInUser){ this.checkoutForm.name=this.loggedInUser.name||this.userProfile.name||''; this.checkoutForm.phone=this.loggedInUser.phone||this.userProfile.mobile||this.loggedInUser.mobile||''; this.checkoutForm.address=this.userProfile.address||this.loggedInUser.address||''; }
+                    this.isBuyNowMode = true;
+                    this.selectedPaymentMethod='COD'; this.utrId=''; this.uploadedImageUrl=''; this.uploadError=''; this.showCheckoutModal=true; history.pushState({page:'checkout'}, '');
                 },
                 toggleWishlist(product){ let idx = this.wishlist.findIndex(i=>i.id===product.id); idx>-1? this.wishlist.splice(idx,1):this.wishlist.push(product); localStorage.setItem('sw_wishlist',JSON.stringify(this.wishlist)); this.showToast(`${product.name} ${idx>-1?'removed from':'added to'} wishlist`,'info'); },
                 isInWishlist(product){ return this.wishlist.some(i=>i.id===product.id); },
@@ -2519,6 +2923,9 @@
                     if(this.pendingAction === 'checkout'){
                         this.pendingAction = null;
                         this.$nextTick(() => { this.openCheckout(); });
+                    } else if(this.pendingAction === 'buynow'){
+                        this.pendingAction = null;
+                        this.$nextTick(() => { this.openBuyNowCheckout(); });
                     } else {
                         this.pendingAction = null;
                     }
@@ -2588,7 +2995,7 @@
                     let cartKey = product.id + (sizeLabel ? '_' + sizeLabel : '');
                     let existing = this.cartItems.find(i=>i.cartKey===cartKey);
                     if(existing){ existing.quantity+=1; }
-                    else { this.cartItems.push({ cartKey, id:product.id, name:product.name + (sizeLabel && sizeLabel!=='Free Size' ? ' ('+sizeLabel+')' : ''), price:product.price, image:img, quantity:1, size:sizeLabel }); }
+                    else { this.cartItems.push({ cartKey, id:product.id, name:product.name + (sizeLabel && sizeLabel!=='Free Size' ? ' ('+sizeLabel+')' : ''), price:product.price, image:img, quantity:1, size:sizeLabel, shopkeeperName: product.shopkeeperName || product.shopkeeper || product.sellerName || '', shopkeeperId: product.shopkeeperId || product.sellerId || '' }); }
                     this.showToast(`🛒 ${product.name}${sizeLabel && sizeLabel!=='Free Size' ? ' ['+sizeLabel+']' : ''} added to cart`, 'cart');
                     localStorage.setItem('sw_cart',JSON.stringify(this.cartItems));
                 },
@@ -2601,7 +3008,7 @@
                         this.showLoginModal = true;
                         return;
                     }
-                    if(this.loggedInUser){ this.checkoutForm.name=this.loggedInUser.name; this.checkoutForm.phone=this.loggedInUser.phone; }
+                    if(this.loggedInUser){ this.checkoutForm.name=this.loggedInUser.name||this.userProfile.name||''; this.checkoutForm.phone=this.loggedInUser.phone||this.userProfile.mobile||this.loggedInUser.mobile||''; this.checkoutForm.address=this.userProfile.address||this.loggedInUser.address||''; }
                     this.selectedPaymentMethod='COD'; this.utrId=''; this.uploadedImageUrl=''; this.uploadError=''; this.showCheckoutModal=true; history.pushState({page:'checkout'}, '');
                 },
                 async uploadReceiptToImgbb(event) {
@@ -2635,7 +3042,7 @@
                     }
                     if (!this.uploadedImageUrl) { this.uploadError = 'Please upload payment receipt'; return; }
                     if (this.utrId.length < 6) { alert('Please enter a valid UTR ID'); return; }
-                    const orderItems = this.cartItems.map(it => ({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price) }));
+                    const orderItems = this.cartItems.map(it => ({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), shopkeeperName: it.shopkeeperName || it.shopkeeper || '', shopkeeper: it.shopkeeperName || it.shopkeeper || '', shopkeeperId: it.shopkeeperId || '' }));
                     const newOrder = {
                         customerName: this.checkoutForm.name.trim(),
                         customerPhone: this.checkoutForm.phone.trim(),
@@ -2644,7 +3051,9 @@
                         customerEmail: this.loggedInUser ? (this.loggedInUser.email || '') : '',
                         uid: this.loggedInUser ? (this.loggedInUser.uid || '') : '',
                         items: orderItems,
-                        total: this.cartTotal,
+                        itemTotal: this.cartTotal,
+                        deliveryCharge: this.deliveryChargeApplied,
+                        total: this.grandTotal,
                         status: 'pending',
                         paymentMethod: 'ONLINE',
                         payment_method: 'Online',
@@ -2659,7 +3068,8 @@
                             await database.ref(`users/${newUser.phone}`).set(newUser);
                             this.loggedInUser = newUser; localStorage.setItem('sw_user', JSON.stringify(newUser));
                         }
-                        this.cartItems = []; localStorage.removeItem('sw_cart');
+                        if(!this.isBuyNowMode){ this.cartItems = []; localStorage.removeItem('sw_cart'); }
+                        this.buyNowItem=null; this.isBuyNowMode=false;
                         this.showPaymentVerifyModal = false; this.selectedProduct = null;
                         this.utrId = ''; this.uploadedImageUrl = '';
                         this.showOrderSuccess = true;
@@ -2667,15 +3077,30 @@
                         this.loadMyOrders();
                     } catch(e) { alert(e.message); }
                 },
-                async confirmOrder(){ if(!this.checkoutForm.name.trim()||!this.checkoutForm.phone.trim()||this.checkoutForm.phone.length<10||!this.checkoutForm.address.trim()){ alert('All fields required'); return; } const orderItems = this.cartItems.map(it=>({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price) })); const newOrder = { customerName:this.checkoutForm.name.trim(), customerPhone:this.checkoutForm.phone.trim(), customerAddress:this.checkoutForm.address.trim(), userEmail:this.loggedInUser?(this.loggedInUser.email||this.checkoutForm.phone.trim()):this.checkoutForm.phone.trim(), customerEmail:this.loggedInUser?(this.loggedInUser.email||''):'', uid:this.loggedInUser?(this.loggedInUser.uid||''):'', items:orderItems, total:this.cartTotal, status:'pending', paymentMethod:'COD', payment_method:'COD', date:new Date().toISOString() }; try{ await database.ref('orders').push(newOrder); if(!this.loggedInUser){ const newUser = { name:newOrder.customerName, phone:newOrder.customerPhone }; await database.ref(`users/${newUser.phone}`).set(newUser); this.loggedInUser=newUser; localStorage.setItem('sw_user',JSON.stringify(newUser)); } this.cartItems=[]; localStorage.removeItem('sw_cart'); this.showCheckoutModal=false; this.selectedProduct=null; this.showOrderSuccess=true; this.showToast('Order placed!','order'); this.loadMyOrders(); }catch(e){ alert(e.message); } },
+                async confirmOrder(){
+                    if(!this.checkoutForm.name.trim()||!this.checkoutForm.phone.trim()||this.checkoutForm.phone.length<10||!this.checkoutForm.address.trim()){ alert('All fields required'); return; }
+                    const activeItems = this.isBuyNowMode ? this.buyNowItem : this.cartItems;
+                    const orderItems = activeItems.map(it=>({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), shopkeeperName:it.shopkeeperName||it.shopkeeper||'', shopkeeper:it.shopkeeperName||it.shopkeeper||'', shopkeeperId:it.shopkeeperId||'' }));
+                    const itemTotal = activeItems.reduce((s,i)=>s+Number(i.price)*i.quantity,0);
+                    const newOrder = { customerName:this.checkoutForm.name.trim(), customerPhone:this.checkoutForm.phone.trim(), customerAddress:this.checkoutForm.address.trim(), userEmail:this.loggedInUser?(this.loggedInUser.email||this.checkoutForm.phone.trim()):this.checkoutForm.phone.trim(), customerEmail:this.loggedInUser?(this.loggedInUser.email||''):'', uid:this.loggedInUser?(this.loggedInUser.uid||''):'', items:orderItems, itemTotal:itemTotal, deliveryCharge:this.deliveryChargeApplied, total:itemTotal+this.deliveryChargeApplied, status:'pending', paymentMethod:'COD', payment_method:'COD', date:new Date().toISOString() };
+                    try{
+                        await database.ref('orders').push(newOrder);
+                        if(!this.loggedInUser){ const newUser = { name:newOrder.customerName, phone:newOrder.customerPhone }; await database.ref(`users/${newUser.phone}`).set(newUser); this.loggedInUser=newUser; localStorage.setItem('sw_user',JSON.stringify(newUser)); }
+                        // Sirf normal cart ko clear karo, buyNow mode mein cart safe rahe
+                        if(!this.isBuyNowMode){ this.cartItems=[]; localStorage.removeItem('sw_cart'); }
+                        this.buyNowItem=null; this.isBuyNowMode=false;
+                        this.showCheckoutModal=false; this.selectedProduct=null; this.showOrderSuccess=true; this.showToast('Order placed!','order'); this.loadMyOrders();
+                    }catch(e){ alert(e.message); }
+                },
                 isEligibleForReturn(date){ if(!date) return false; return Math.ceil((new Date()-new Date(date))/(1000*60*60*24)) <= 6; },
                 initiateReturnExchange(order){ this.activeReturnOrder=order; this.returnPayload={reason:'',action:'',bankDetails:{name:'',bankName:'',accNumber:'',ifsc:'',phone:''}}; this.showReturnPage=true; history.pushState({page:'return'}, ''); },
                 handleBackButton(){
                     if(this.showFullScreenImage){ this.showFullScreenImage=false; return; }
                     if(this.showLoginModal){ this.showLoginModal=false; return; }
-                    if(this.showCheckoutModal){ this.showCheckoutModal=false; return; }
+                    if(this.showCheckoutModal){ this.showCheckoutModal=false; this.isBuyNowMode=false; this.buyNowItem=null; return; }
                     if(this.showPaymentVerifyModal){ this.showPaymentVerifyModal=false; return; }
                     if(this.showReturnPage){ this.showReturnPage=false; return; }
+                    if(this.showSearchResults){ this.showSearchResults=false; this.searchQuery=''; window.scrollTo({top:0,behavior:'smooth'}); return; }
                     if(this.selectedProduct){ this.selectedProduct=null; window.scrollTo({top:0,behavior:'smooth'}); return; }
                     if(this.activeTab !== 'products'){ this.activeTab='products'; return; }
                 },
@@ -2823,6 +3248,16 @@
                     });
                     database.ref('admin_settings/global_discount').on('value',(snapshot)=>{
                         this.globalDiscount = snapshot.exists() ? (Number(snapshot.val()) || 0) : 0;
+                    });
+                    database.ref('app_settings/delivery').on('value',(snapshot)=>{
+                        if(snapshot.exists()){
+                            const d = snapshot.val();
+                            this.deliverySettings = {
+                                deliveryCharge: Number(d.deliveryCharge) || 0,
+                                isActive: d.isActive === true || d.isActive === 'true',
+                                minOrderLimit: Number(d.minOrderLimit) || 0
+                            };
+                        }
                     });
                 },
                 formatDate(iso){ if(!iso) return ''; let d=new Date(iso); return d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); },
