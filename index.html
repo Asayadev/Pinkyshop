@@ -2487,19 +2487,37 @@
                 },
                 filteredProducts() {
                     let list = [...this.products].reverse();
+
+                    // Category filter
                     if (this.selectedCategory && this.selectedCategory !== 'All') {
                         list = list.filter(p => p.category === this.selectedCategory);
                     }
-                    if (this.searchQuery && this.searchQuery.trim()) {
-                        const q = this.searchQuery.toLowerCase();
-                        list = list.filter(p => 
-                            p.name.toLowerCase().includes(q) || 
-                            (p.category && p.category.toLowerCase().includes(q)) ||
-                            (p.description && p.description.toLowerCase().includes(q)) ||
-                            (p.shopkeeperName && p.shopkeeperName.toLowerCase().includes(q))
-                        );
-                    }
-                    return list;
+
+                    // 🚀 Smart fuzzy search
+                    if (!this.searchQuery || this.searchQuery.trim() === '') return list;
+
+                    const searchWords = this.searchQuery.toLowerCase().trim().split(/\s+/);
+
+                    return list.filter(product => {
+                        const productName     = (product.name          || '').toLowerCase();
+                        const productDesc     = (product.description   || '').toLowerCase();
+                        const productCategory = (product.category      || '').toLowerCase();
+                        const shopName        = (product.shopkeeperName|| '').toLowerCase();
+                        const combinedText    = `${productName} ${productDesc} ${productCategory} ${shopName}`;
+
+                        return searchWords.every(word => {
+                            // 1. Direct match
+                            if (combinedText.includes(word)) return true;
+
+                            // 2. Fuzzy match — 1 akshar galat hone par bhi milaye (4+ char words)
+                            if (word.length > 3) {
+                                for (let i = 0; i < word.length; i++) {
+                                    if (combinedText.includes(word.substring(0, i) + word.substring(i + 1))) return true;
+                                }
+                            }
+                            return false;
+                        });
+                    });
                 },
                 smartFilteredProducts() {
                     let list = this.filteredProducts;
