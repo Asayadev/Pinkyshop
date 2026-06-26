@@ -2738,9 +2738,16 @@
                 // ---- PROFILE ----
                 async fetchProfile() {
                     if (!this.loggedInUser) return;
+                    const uid   = this.loggedInUser.uid;
                     const phone = this.loggedInUser.phone;
                     try {
-                        const snap = await database.ref('users/' + phone).once('value');
+                        // Email users are stored under users_email/{uid}
+                        // Phone users are stored under users/{phone}
+                        const isEmailUser = !!uid;
+                        const ref = isEmailUser
+                            ? database.ref('users_email/' + uid)
+                            : database.ref('users/' + phone);
+                        const snap = await ref.once('value');
                         if (snap.exists()) {
                             const d = snap.val();
                             this.userProfile = {
@@ -2749,29 +2756,17 @@
                                 address: d.address || ''
                             };
                             this.userCashback = Number(d.cashback) || 0;
-                        } else {
+                        } else if (!isEmailUser && phone) {
                             this.userProfile = { name: this.loggedInUser.name || '', mobile: phone, address: '' };
+                            this.userCashback = 0;
+                        } else {
+                            this.userProfile = { name: this.loggedInUser.name || '', mobile: phone || '', address: '' };
                             this.userCashback = 0;
                         }
                     } catch(e) {
-                        this.userProfile = { name: this.loggedInUser.name || '', mobile: phone, address: '' };
+                        this.userProfile = { name: this.loggedInUser.name || '', mobile: phone || '', address: '' };
                         this.userCashback = 0;
                     }
-                    this.startCashbackListener();
-                },
-                startCashbackListener() {
-                    if (this._cashbackRef) { this._cashbackRef.off('value', this._cashbackHandler); }
-                    if (!this.loggedInUser) return;
-                    const vm = this;
-                    if (this.loggedInUser.phone) {
-                        this._cashbackRef = database.ref('users/' + this.loggedInUser.phone + '/cashback');
-                    } else if (this.loggedInUser.uid) {
-                        this._cashbackRef = database.ref('users_email/' + this.loggedInUser.uid + '/cashback');
-                    } else { return; }
-                    this._cashbackHandler = function(snap) {
-                        vm.userCashback = Number(snap.val()) || 0;
-                    };
-                    this._cashbackRef.on('value', this._cashbackHandler);
                 },
                 toggleEditProfile() {
                     this.profileDraft = { ...this.userProfile };
@@ -3498,7 +3493,6 @@
                                 vm.loggedInUser = userData;
                                 localStorage.setItem('sw_user', JSON.stringify(userData));
                                 vm.loadMyOrders();
-                                vm.startCashbackListener();
                             }
                         } catch(e) { console.log('Auth state check error:', e); }
                     }
