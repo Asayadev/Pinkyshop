@@ -592,9 +592,6 @@
                                       class="text-[13px] font-bold text-green-600">{{ getTotalDiscount(product) }}% off</span>
                             </div>
 
-                            <!-- COD price -->
-                            <p class="text-[12px] text-pink-500 font-medium mb-1.5">₹{{ getEffectiveOriginal(product) || Number(product.price).toFixed(0) }} with COD</p>
-
                             <!-- Cashback Badge -->
                             <div v-if="Number(product.cashback) > 0"
                                  class="inline-flex items-center gap-1 bg-green-50 border border-green-200 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full mb-1.5">
@@ -1513,6 +1510,55 @@
                     </div>
                 </div>
 
+                <!-- Profile Fields Card -->
+                <div class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+                    <div class="flex items-center gap-2 mb-1">
+                        <i class="fas fa-id-card text-pink-400"></i>
+                        <p class="text-sm font-black text-gray-800">Personal Information</p>
+                        <span v-if="isEditingProfile" class="ml-auto text-[10px] bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded-full">✏️ Editing</span>
+                    </div>
+
+                    <!-- Full Name -->
+                    <div>
+                        <p class="profile-label"><i class="fas fa-user"></i> Full Name</p>
+                        <div v-if="!isEditingProfile" class="profile-field-view">
+                            <i class="fas fa-user text-pink-300 text-xs flex-shrink-0"></i>
+                            <span>{{ userProfile.name || '—' }}</span>
+                        </div>
+                        <input v-else v-model="profileDraft.name" type="text" placeholder="Enter your full name"
+                            class="profile-field-edit" maxlength="60">
+                    </div>
+
+                    <!-- Mobile Number -->
+                    <div>
+                        <p class="profile-label"><i class="fas fa-mobile-alt"></i> Mobile Number</p>
+                        <div v-if="!isEditingProfile" class="profile-field-view">
+                            <i class="fas fa-mobile-alt text-pink-300 text-xs flex-shrink-0"></i>
+                            <span>+91 {{ userProfile.mobile || loggedInUser.phone || '—' }}</span>
+                        </div>
+                        <div v-else class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">+91</span>
+                            <input v-model="profileDraft.mobile" type="tel" placeholder="10-digit mobile number"
+                                class="profile-field-edit pl-10" maxlength="10" @input="profileDraft.mobile=profileDraft.mobile.replace(/\D/g,'')">
+                        </div>
+                        <p v-if="isEditingProfile && profileDraft.mobile && profileDraft.mobile.length !== 10"
+                            class="text-[10px] text-orange-500 font-semibold mt-1 flex items-center gap-1">
+                            <i class="fas fa-exclamation-circle"></i> 10 digits required
+                        </p>
+                    </div>
+
+                    <!-- Delivery Address -->
+                    <div>
+                        <p class="profile-label"><i class="fas fa-map-marker-alt"></i> Delivery Address</p>
+                        <div v-if="!isEditingProfile" class="profile-field-view" style="align-items:flex-start;padding-top:10px;min-height:56px;">
+                            <i class="fas fa-map-marker-alt text-pink-300 text-xs flex-shrink-0 mt-0.5"></i>
+                            <span style="white-space:pre-wrap;">{{ userProfile.address || '—' }}</span>
+                        </div>
+                        <textarea v-else v-model="profileDraft.address" rows="3" placeholder="Enter your full delivery address"
+                            class="profile-field-edit resize-none" style="padding-top:10px;"></textarea>
+                    </div>
+                </div>
+
                 <!-- ===== CASHBACK + REWARDS CARDS (side by side) ===== -->
                 <div class="flex gap-3">
 
@@ -1567,14 +1613,14 @@
                     </div>
                 </div>
 
-                <!-- Recent Cashback Used (below cards) -->
+                <!-- Recent Cashback Used (below cards) — scrollable -->
                 <div v-if="userOrders.some(o => Number(o.cashbackUsed) > 0)"
                      class="rounded-2xl bg-green-50 border border-green-100 px-4 py-3">
                     <p class="text-green-700 text-[10px] font-bold uppercase tracking-wider mb-2">
                         <i class="fas fa-history mr-1"></i> Recent Cashback Used
                     </p>
-                    <div class="space-y-1.5">
-                        <div v-for="o in userOrders.filter(o=>Number(o.cashbackUsed)>0).slice(0,3)" :key="o.id"
+                    <div class="space-y-1.5 overflow-y-auto" style="max-height:160px;">
+                        <div v-for="o in userOrders.filter(o=>Number(o.cashbackUsed)>0)" :key="o.id"
                              class="flex items-center justify-between bg-white rounded-xl px-3 py-2 shadow-sm">
                             <div>
                                 <p class="text-gray-800 text-[11px] font-bold">#{{ o.id.slice(-6).toUpperCase() }}</p>
@@ -1584,55 +1630,6 @@
                                 -₹{{ Number(o.cashbackUsed).toFixed(2) }}
                             </span>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Profile Fields Card -->
-                <div class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
-                    <div class="flex items-center gap-2 mb-1">
-                        <i class="fas fa-id-card text-pink-400"></i>
-                        <p class="text-sm font-black text-gray-800">Personal Information</p>
-                        <span v-if="isEditingProfile" class="ml-auto text-[10px] bg-pink-100 text-pink-700 font-bold px-2 py-0.5 rounded-full">✏️ Editing</span>
-                    </div>
-
-                    <!-- Full Name -->
-                    <div>
-                        <p class="profile-label"><i class="fas fa-user"></i> Full Name</p>
-                        <div v-if="!isEditingProfile" class="profile-field-view">
-                            <i class="fas fa-user text-pink-300 text-xs flex-shrink-0"></i>
-                            <span>{{ userProfile.name || '—' }}</span>
-                        </div>
-                        <input v-else v-model="profileDraft.name" type="text" placeholder="Enter your full name"
-                            class="profile-field-edit" maxlength="60">
-                    </div>
-
-                    <!-- Mobile Number -->
-                    <div>
-                        <p class="profile-label"><i class="fas fa-mobile-alt"></i> Mobile Number</p>
-                        <div v-if="!isEditingProfile" class="profile-field-view">
-                            <i class="fas fa-mobile-alt text-pink-300 text-xs flex-shrink-0"></i>
-                            <span>+91 {{ userProfile.mobile || loggedInUser.phone || '—' }}</span>
-                        </div>
-                        <div v-else class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">+91</span>
-                            <input v-model="profileDraft.mobile" type="tel" placeholder="10-digit mobile number"
-                                class="profile-field-edit pl-10" maxlength="10" @input="profileDraft.mobile=profileDraft.mobile.replace(/\D/g,'')">
-                        </div>
-                        <p v-if="isEditingProfile && profileDraft.mobile && profileDraft.mobile.length !== 10"
-                            class="text-[10px] text-orange-500 font-semibold mt-1 flex items-center gap-1">
-                            <i class="fas fa-exclamation-circle"></i> 10 digits required
-                        </p>
-                    </div>
-
-                    <!-- Delivery Address -->
-                    <div>
-                        <p class="profile-label"><i class="fas fa-map-marker-alt"></i> Delivery Address</p>
-                        <div v-if="!isEditingProfile" class="profile-field-view" style="align-items:flex-start;padding-top:10px;min-height:56px;">
-                            <i class="fas fa-map-marker-alt text-pink-300 text-xs flex-shrink-0 mt-0.5"></i>
-                            <span style="white-space:pre-wrap;">{{ userProfile.address || '—' }}</span>
-                        </div>
-                        <textarea v-else v-model="profileDraft.address" rows="3" placeholder="Enter your full delivery address"
-                            class="profile-field-edit resize-none" style="padding-top:10px;"></textarea>
                     </div>
                 </div>
 
