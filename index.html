@@ -3470,7 +3470,57 @@
                     return 'text-gray-400';
                 },
                 loadProducts(){ database.ref('products').on('value',(snapshot)=>{ let data=snapshot.val(); this.products=data?Object.keys(data).map(key=>({ id:key, ...data[key] })):[];  this.$nextTick(()=>this.loadSuggestions()); }); },
-                loadMyOrders(){ if(!this.loggedInUser) return; database.ref('orders').on('value',(snapshot)=>{ let data=snapshot.val(); if(data){ let allOrders=Object.keys(data).map(key=>({ id:key, ...data[key] })); const u=this.loggedInUser; let updatedOrders=allOrders.filter(o=>{ if(u.phone && u.phone.length>=10 && o.customerPhone===u.phone) return true; if(u.email && (o.userEmail===u.email || o.customerEmail===u.email)) return true; if(u.uid && o.uid===u.uid) return true; return false; }).reverse(); updatedOrders.forEach(order=>{ let old=this.previousOrderStatuses[order.id]; if(old && old!==order.status){ let shortId=order.id.slice(-6); if(order.status==='rejected') this.showToast(`Order #${shortId} cancelled`,'error'); else if(order.status==='return_approved'||order.status==='exchange_approved') this.showToast(`Return/Exchange approved for #${shortId}`,'order'); else if(order.status==='return_rejected'||order.status==='exchange_rejected') this.showToast(`Return/Exchange rejected for #${shortId}`,'error'); } this.previousOrderStatuses[order.id]=order.status; }); this.orders=updatedOrders; }else{ this.orders=[]; this.previousOrderStatuses={}; } }); },
+                loadMyOrders(){
+                    if(!this.loggedInUser) return;
+                    database.ref('orders').on('value',(snapshot)=>{
+                        let data=snapshot.val();
+                        if(data){
+                            let allOrders=Object.keys(data).map(key=>({ id:key, ...data[key] }));
+                            const u=this.loggedInUser;
+                            let updatedOrders=allOrders.filter(o=>{
+                                if(u.phone && u.phone.length>=10 && o.customerPhone===u.phone) return true;
+                                if(u.email && (o.userEmail===u.email || o.customerEmail===u.email)) return true;
+                                if(u.uid && o.uid===u.uid) return true;
+                                return false;
+                            }).reverse();
+                            updatedOrders.forEach(order=>{
+                                let old=this.previousOrderStatuses[order.id];
+                                if(old && old!==order.status){
+                                    let shortId=order.id.slice(-6);
+                                    if(order.status==='rejected') this.showToast(`Order #${shortId} cancelled`,'error');
+                                    else if(order.status==='delivered') this.showToast(`🎉 Order #${shortId} delivered!`,'success');
+                                    else if(order.status==='return_approved'||order.status==='exchange_approved') this.showToast(`Return/Exchange approved for #${shortId}`,'order');
+                                    else if(order.status==='return_rejected'||order.status==='exchange_rejected') this.showToast(`Return/Exchange rejected for #${shortId}`,'error');
+                                }
+                                this.previousOrderStatuses[order.id]=order.status;
+                                // ── Credit cashback when order is delivered ──
+                                if(order.status==='delivered' && !order.cashbackCredited && Number(order.totalCashbackEarnable||0)>0){
+                                    const earn=Number(order.totalCashbackEarnable);
+                                    const phone=this.loggedInUser.phone;
+                                    const uid=this.loggedInUser.uid;
+                                    // Mark credited immediately to prevent double-credit
+                                    database.ref('orders/'+order.id).update({ cashbackCredited: true });
+                                    if(phone){
+                                        database.ref('users/'+phone).once('value').then(snap=>{
+                                            const cur=snap.exists()?Number(snap.val().cashback||0):0;
+                                            database.ref('users/'+phone).update({ cashback: cur+earn });
+                                        });
+                                    } else if(uid){
+                                        database.ref('users_email/'+uid).once('value').then(snap=>{
+                                            const cur=snap.exists()?Number(snap.val().cashback||0):0;
+                                            database.ref('users_email/'+uid).update({ cashback: cur+earn });
+                                        });
+                                    }
+                                    this.showToast(`💰 ₹${earn.toFixed(0)} cashback wallet mein add ho gaya!`,'success');
+                                }
+                            });
+                            this.orders=updatedOrders;
+                        } else {
+                            this.orders=[];
+                            this.previousOrderStatuses={};
+                        }
+                    });
+                },
                 loadBanners(){ database.ref('banners').on('value',(snapshot)=>{ let val=snapshot.val(); this.banners=val?Object.values(val):['https://placehold.co/800x400?text=Pinkkart+Offers']; }); },
                 loadReviewsFeed() {
                     database.ref('reviews').on('value', (snapshot) => {
