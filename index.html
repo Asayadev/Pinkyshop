@@ -255,7 +255,10 @@
                     </div>
                 </label>
                 <div>
-                    <p class="text-xs text-gray-400 font-medium leading-tight">Welcome 👋</p>
+                    <p v-if="loggedInUser" class="text-[10px] font-bold text-green-600 leading-tight flex items-center gap-1">
+                        <i class="fas fa-wallet text-[9px]"></i> ₹{{ Number(loggedInUser.cashback || 0).toFixed(2) }} Cashback
+                    </p>
+                    <p v-else class="text-xs text-gray-400 font-medium leading-tight">Welcome 👋</p>
                     <p v-if="loggedInUser" class="text-sm font-bold text-gray-800 leading-tight max-w-[120px] truncate">{{ loggedInUser.name }}</p>
                     <div v-else class="flex items-center gap-1 mt-0.5">
                         <button @click="openAuth('login')" class="text-[11px] bg-pink-500 text-white px-2.5 py-0.5 rounded-full font-bold">Login</button>
@@ -1620,7 +1623,7 @@
                         <i class="fas fa-history mr-1"></i> Recent Cashback Used
                     </p>
                     <div class="space-y-1.5 overflow-y-auto" style="max-height:160px;">
-                        <div v-for="o in userOrders.filter(o=>Number(o.cashbackUsed)>0)" :key="o.id"
+                        <div v-for="o in userOrders.filter(o=>Number(o.cashbackUsed)>0).slice().sort((a,b)=>new Date(b.date)-new Date(a.date))" :key="o.id"
                              class="flex items-center justify-between bg-white rounded-xl px-3 py-2 shadow-sm">
                             <div>
                                 <p class="text-gray-800 text-[11px] font-bold">#{{ o.id.slice(-6).toUpperCase() }}</p>
