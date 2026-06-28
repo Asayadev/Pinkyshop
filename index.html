@@ -2877,7 +2877,17 @@
                     this.profileSaving = true;
                     try {
                         const phone = this.loggedInUser.phone;
-                        await database.ref('users/' + phone).update({ name, phone: mobile, address });
+                        const uid   = this.loggedInUser.uid;
+                        if (phone) {
+                            // Phone-based login: save under users/<phone>
+                            await database.ref('users/' + phone).update({ name, phone: mobile, address });
+                        } else if (uid) {
+                            // Email-based login: save under users_email/<uid>
+                            await database.ref('users_email/' + uid).update({ name, phone: mobile, address });
+                        } else {
+                            this.showToast('❌ User session error. Please login again.', 'error');
+                            return;
+                        }
                         this.userProfile = { name, mobile, address };
                         // Sync loggedInUser name
                         this.loggedInUser = { ...this.loggedInUser, name };
