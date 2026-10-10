@@ -4,12 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Pinkkart | User Panel - Pinkkart</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script>
+        (function () {
+            window.__pkFailedAssets = [];
+            var bannerShown = false;
+            function renderBanner() {
+                if (bannerShown || !document.body) return;
+                bannerShown = true;
+                var banner = document.createElement('div');
+                banner.id = 'pkAssetErrorBanner';
+                banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;font-family:sans-serif;font-size:13px;font-weight:600;padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,0.25);';
+                banner.innerHTML = '<span>\u26A0\uFE0F Some app resources failed to load. Please check your internet connection and refresh.</span>' +
+                    '<button id="pkAssetRetryBtn" style="background:#fff;color:#dc2626;border:none;padding:6px 14px;border-radius:6px;font-weight:700;cursor:pointer;">Refresh</button>';
+                document.body.insertBefore(banner, document.body.firstChild);
+                var btn = document.getElementById('pkAssetRetryBtn');
+                if (btn) btn.onclick = function () { window.location.reload(); };
+            }
+            window.__pkAssetError = function (name) {
+                if (window.__pkFailedAssets.indexOf(name) === -1) window.__pkFailedAssets.push(name);
+                if (document.body) {
+                    renderBanner();
+                } else {
+                    document.addEventListener('DOMContentLoaded', renderBanner);
+                }
+            };
+            window.addEventListener('load', function () {
+                setTimeout(function () {
+                    if (typeof Vue === 'undefined' || typeof firebase === 'undefined') {
+                        window.__pkAssetError('core-scripts');
+                    }
+                }, 300);
+            });
+            window.__pkScriptFallback = function (cdnUrl, label) {
+                document.write('<script src="' + cdnUrl + '" onerror="window.__pkAssetError(\'' + label + '\')"><' + '/script>');
+            };
+            window.__pkLinkFallback = function (cdnUrl, label) {
+                var l = document.createElement('link');
+                l.rel = 'stylesheet';
+                l.href = cdnUrl;
+                l.onerror = function () { window.__pkAssetError(label); };
+                document.head.appendChild(l);
+            };
+        })();
+    </script>
+    <script src="tailwind.js" onerror="window.__pkScriptFallback('https://cdn.tailwindcss.com', 'tailwind.js')"></script>
+    <link rel="stylesheet" href="inter.css" onerror="window.__pkLinkFallback('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap', 'inter.css')">
+    <link rel="stylesheet" href="all.min.css" onerror="window.__pkLinkFallback('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css', 'all.min.css')">
+    <script src="firebase-app-compat.js" onerror="window.__pkScriptFallback('https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js', 'firebase-app-compat.js')"></script>
+    <script src="firebase-database-compat.js" onerror="window.__pkScriptFallback('https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js', 'firebase-database-compat.js')"></script>
+    <script src="firebase-auth-compat.js" onerror="window.__pkScriptFallback('https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js', 'firebase-auth-compat.js')"></script>
     <style>
         /* ===== THEME VARIABLES ===== */
         :root {
@@ -276,7 +319,7 @@
                     <span v-if="wishlist.length" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-black rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">{{ wishlist.length }}</span>
                 </button>
                 <!-- Cart icon -->
-                <button @click="activeTab='cart'; history.pushState({page:'tab'},'')" class="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-blue-50 transition">
+                <button @click="isBuyNowMode=false; buyNowItem=null; activeTab='cart'; history.pushState({page:'tab'},'')" class="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-blue-50 transition">
                     <i class="fas fa-shopping-cart text-gray-600 text-xl"></i>
                     <span v-if="cartItems && cartItems.length" class="absolute -top-0.5 -right-0.5 bg-purple-600 text-white text-[10px] font-black rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">{{ cartItems.length }}</span>
                 </button>
@@ -354,6 +397,11 @@
                     <!-- Info -->
                     <div class="px-2.5 pt-2 pb-3">
                         <p class="text-gray-800 text-[13px] font-semibold leading-snug mb-1" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ product.name }}</p>
+                        <!-- Weight/Variant Selector -->
+                        <select v-if="product.hasVariants && product.variants" v-model.number="product.selectedVariantIndex" @click.stop @change.stop
+                                class="w-full text-[11px] font-bold border border-gray-200 rounded-lg px-1.5 py-1 mb-1 bg-white text-gray-700 outline-none">
+                            <option v-for="(v, i) in product.variants" :key="i" :value="i">{{ v.weight }} - ₹{{ v.price }}</option>
+                        </select>
 
                         <div class="flex items-baseline gap-1.5 flex-wrap mb-0.5">
                             <span class="text-[17px] font-black text-gray-900">₹{{ getEffectivePrice(product) }}</span>
@@ -392,6 +440,27 @@
 
         <div v-show="activeTab === 'products'" v-if="!showSearchResults">
             
+            <div v-if="!selectedProduct" class="mb-4 overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-yellow-50 to-orange-50 shadow-sm">
+                <div class="flex items-center gap-3 p-4">
+                    <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow"><i class="fas fa-crown text-xl"></i></div>
+                    <div class="min-w-0 flex-1">
+                        <template v-if="isVipActive">
+                            <p class="text-sm font-black text-amber-900">👑 VIP Member</p>
+                            <p class="text-xs font-bold text-amber-800">{{ vipMembership.planName }}</p>
+                            <p class="text-[10px] text-amber-700">Expires: {{ formatVipDate(vipMembership.expiryDate) }}</p>
+                        </template>
+                        <template v-else>
+                            <p class="text-sm font-black text-amber-900">Buy VIP Pass @ ₹{{ featuredVipPlan ? Number(featuredVipPlan.price).toFixed(0) : '199' }} - Get Flat {{ featuredVipPlan ? Number(featuredVipPlan.discount) : 10 }}% OFF &amp; {{ featuredVipPlan && !featuredVipPlan.freeDelivery ? 'VIP benefits' : 'Free Delivery' }}</p>
+                            <p class="text-[10px] text-amber-700">Join VIP to save on eligible orders and delivery.</p>
+                        </template>
+                        <p v-if="vipMembershipRequest && vipMembershipRequest.status === 'pending'" class="mt-1 text-[10px] font-bold text-blue-700"><i class="fas fa-clock mr-1"></i>VIP payment is awaiting admin verification.</p>
+                    </div>
+                    <button @click="openVipPlans()" class="flex-shrink-0 rounded-xl bg-amber-500 px-3 py-2 text-[10px] font-black text-white shadow hover:bg-amber-600">
+                        {{ isVipActive ? 'VIP Details' : 'Buy / Upgrade' }}
+                    </button>
+                </div>
+            </div>
+
             <div v-if="!selectedProduct" class="space-y-4 mb-5">
                 
                 <div class="flex justify-center w-full">
@@ -582,6 +651,12 @@
                             <!-- Name -->
                             <p class="text-gray-800 text-[13px] font-semibold leading-snug mb-1" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ product.name }}</p>
 
+                            <!-- Weight/Variant Selector -->
+                            <select v-if="product.hasVariants && product.variants" v-model.number="product.selectedVariantIndex" @click.stop @change.stop
+                                    class="w-full text-[11px] font-bold border border-gray-200 rounded-lg px-1.5 py-1 mb-1 bg-white text-gray-700 outline-none">
+                                <option v-for="(v, i) in product.variants" :key="i" :value="i">{{ v.weight }} - ₹{{ v.price }}</option>
+                            </select>
+
                             <!-- Price + strikethrough + % off — Meesho style -->
                             <div class="flex items-baseline gap-1.5 flex-wrap mb-0.5">
                                 <span class="text-[17px] font-black text-gray-900">₹{{ getEffectivePrice(product) }}</span>
@@ -708,6 +783,17 @@
                             </p>
                         </div>
 
+                        <!-- Weight/Variant Selector — Product Detail -->
+                        <div v-if="selectedProduct.hasVariants && selectedProduct.variants" class="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <p class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                                <i class="fas fa-weight-hanging text-pink-500"></i> Weight चुनें
+                            </p>
+                            <select v-model.number="selectedProduct.selectedVariantIndex"
+                                    class="w-full text-sm font-bold border-2 border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 outline-none">
+                                <option v-for="(v, i) in selectedProduct.variants" :key="i" :value="i">{{ v.weight }} - ₹{{ v.price }}</option>
+                            </select>
+                        </div>
+
                         <div class="mt-4 flex items-baseline gap-2">
                             <span class="text-2xl font-black text-blue-700">₹{{ getEffectivePrice(selectedProduct).toFixed(2) }}</span>
                             <span v-if="getEffectiveOriginal(selectedProduct) && getEffectiveOriginal(selectedProduct) > getEffectivePrice(selectedProduct)" class="text-base text-gray-400 line-through">₹{{ Number(getEffectiveOriginal(selectedProduct)).toFixed(2) }}</span>
@@ -830,10 +916,14 @@
                             </div>
                             <div class="p-3">
                                 <h4 class="font-bold text-xs text-gray-800 truncate">{{ product.name }}</h4>
+                                <select v-if="product.hasVariants && product.variants" v-model.number="product.selectedVariantIndex" @click.stop @change.stop
+                                        class="w-full text-[10px] font-bold border border-gray-200 rounded-lg px-1 py-1 mb-1 bg-white text-gray-700 outline-none">
+                                    <option v-for="(v, i) in product.variants" :key="i" :value="i">{{ v.weight }} - ₹{{ v.price }}</option>
+                                </select>
                                 <div class="flex justify-between items-center mt-2 flex-wrap gap-1">
                                     <div>
-                                        <span class="text-sm font-black text-blue-700">₹{{ Number(product.price).toFixed(2) }}</span>
-                                        <span v-if="product.originalPrice && Number(product.originalPrice) > Number(product.price)" class="text-[10px] text-gray-400 line-through ml-1">₹{{ Number(product.originalPrice).toFixed(2) }}</span>
+                                        <span class="text-sm font-black text-blue-700">₹{{ getEffectivePrice(product).toFixed(2) }}</span>
+                                        <span v-if="getEffectiveOriginal(product) && getEffectiveOriginal(product) > getEffectivePrice(product)" class="text-[10px] text-gray-400 line-through ml-1">₹{{ getEffectiveOriginal(product).toFixed(2) }}</span>
                                     </div>
                                     <span class="text-[10px] text-blue-600 font-bold">View</span>
                                 </div>
@@ -879,7 +969,14 @@
                             <img :src="getDriveImageUrl(product.images ? product.images[0] : product.image)" class="h-20 object-contain" @click="viewProductDetail(product)" onerror="this.src='https://placehold.co/100x100'">
                         </div>
                         <div class="flex-1 flex flex-col justify-between">
-                            <div><h3 class="font-bold text-sm text-gray-800 truncate pr-6">{{ product.name }}</h3><div class="flex items-center gap-2"><span class="text-sm font-black text-blue-700">₹{{ Number(product.price).toFixed(2) }}</span><span v-if="product.originalPrice" class="text-[10px] text-gray-400 line-through">₹{{ product.originalPrice }}</span></div></div>
+                            <div>
+                                <h3 class="font-bold text-sm text-gray-800 truncate pr-6">{{ product.name }}</h3>
+                                <select v-if="product.hasVariants && product.variants" v-model.number="product.selectedVariantIndex" @click.stop
+                                        class="w-full text-[10px] font-bold border border-gray-200 rounded-lg px-1 py-1 my-1 bg-white text-gray-700 outline-none">
+                                    <option v-for="(v, i) in product.variants" :key="i" :value="i">{{ v.weight }} - ₹{{ v.price }}</option>
+                                </select>
+                                <div class="flex items-center gap-2"><span class="text-sm font-black text-blue-700">₹{{ getEffectivePrice(product).toFixed(2) }}</span><span v-if="getEffectiveOriginal(product) && getEffectiveOriginal(product) > getEffectivePrice(product)" class="text-[10px] text-gray-400 line-through">₹{{ getEffectiveOriginal(product).toFixed(2) }}</span></div>
+                            </div>
                             <div class="flex gap-2 mt-2">
                                 <button @click="addToCart(product)" :disabled="!!(product.stockStatus && product.stockStatus !== 'In stock')" :class="(product.stockStatus && product.stockStatus !== 'In stock') ? 'bg-gray-300' : 'bg-blue-600'" class="flex-1 text-white text-[10px] py-2 rounded-lg font-bold"><i class="fas fa-cart-plus mr-1"></i> Cart</button>
                                 <button @click="buyNow(product)" :disabled="!!(product.stockStatus && product.stockStatus !== 'In stock')" :class="(product.stockStatus && product.stockStatus !== 'In stock') ? 'bg-gray-200 text-gray-400' : 'bg-orange-500 text-white'" class="flex-1 text-[10px] py-2 rounded-lg font-bold"><i class="fas fa-bolt mr-1"></i> Buy</button>
@@ -892,7 +989,7 @@
 
         <div v-show="activeTab === 'cart'">
             <div class="bg-white rounded-2xl shadow-sm p-4">
-                <div class="border-b pb-3 mb-3 flex justify-between items-center"><h2 class="text-lg font-bold">Shopping Cart 🛒</h2><button v-if="cartItems.length" @click="cartItems = []" class="text-red-500 text-xs hover:underline">Remove all</button></div>
+                <div class="border-b pb-3 mb-3 flex justify-between items-center"><h2 class="text-lg font-bold">Shopping Cart 🛒</h2><button v-if="cartItems.length" @click="cartItems = []; localStorage.removeItem('sw_cart'); syncCartToCloud();" class="text-red-500 text-xs hover:underline">Remove all</button></div>
                 <div v-if="cartItems.length === 0" class="py-8 text-center">
                     <svg class="mx-auto mb-3" width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="60" cy="60" r="60" fill="#eff6ff"/>
@@ -913,25 +1010,29 @@
                 <div v-else class="space-y-3">
                     <div v-for="item in cartItems" :key="item.id" class="flex gap-3 items-center justify-between border-b pb-3">
                         <img :src="getDriveImageUrl(item.image)" class="w-12 h-12 object-contain bg-gray-50 rounded" alt="" onerror="this.src='https://placehold.co/100x100'">
-                        <div class="flex-1 min-w-0"><p class="font-semibold text-sm truncate">{{ item.name }}</p><p class="text-xs text-blue-600 font-bold">₹{{ Number(item.price).toFixed(2) }}</p></div>
+                        <div class="flex-1 min-w-0"><p class="font-semibold text-sm truncate">{{ item.name }}</p><p v-if="item.weight" class="text-[10px] text-gray-500 font-semibold">{{ item.weight }}</p><p class="text-xs text-blue-600 font-bold">₹{{ Number(item.price).toFixed(2) }}</p></div>
                         <div class="flex items-center gap-2"><button @click="updateQuantity(item, -1)" class="w-6 h-6 rounded bg-gray-100 text-xs font-bold">-</button><span class="text-xs font-bold w-4 text-center">{{ item.quantity }}</span><button @click="updateQuantity(item, 1)" class="w-6 h-6 rounded bg-gray-100 text-xs font-bold">+</button></div>
                     </div>
                     <div class="pt-3 flex justify-between items-center font-bold text-lg"><span>Total Bill:</span><span class="text-blue-700">₹{{ cartTotal.toFixed(2) }}</span></div>
+                    <div v-if="vipDiscountApplied > 0" class="flex justify-between items-center text-xs font-bold text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                        <span>👑 VIP Discount ({{ Number(vipMembership.discountPercent) }}%)</span><span>-₹{{ vipDiscountApplied.toFixed(2) }}</span>
+                    </div>
                     <!-- Cashback Toggle -->
                     <div v-if="loggedInUser && Number(loggedInUser.cashback) > 0"
                          class="mt-2 rounded-xl border overflow-hidden"
                          :class="cartTotal >= 300 ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'">
                         <label class="flex items-center gap-2 cursor-pointer px-3 py-2.5"
                                :class="cartTotal < 300 ? 'opacity-60' : ''">
-                            <input type="checkbox" v-model="useCashback" :disabled="cartTotal < 300"
-                                   class="w-4 h-4 accent-green-500 rounded cursor-pointer flex-shrink-0">
+                           <input type="checkbox" v-model="useCashback" :disabled="cartTotal < 300" class="w-4 h-4 accent-green-500 rounded cursor-pointer flex-shrink-0">
+
                             <div class="flex-1">
                                 <p class="text-xs font-bold" :class="cartTotal >= 300 ? 'text-green-700' : 'text-gray-500'">
-                                    Use Cashback Balance
+                                    Use Cashback Wallet (₹{{ Number(loggedInUser.cashback || 0).toFixed(2) }})
+
                                 </p>
                                 <p class="text-[10px]" :class="cartTotal >= 300 ? 'text-green-600' : 'text-gray-400'">
-                                    Available: ₹{{ Number(loggedInUser.cashback || 0).toFixed(2) }}
-                                    &nbsp;·&nbsp; Max: ₹{{ Math.min(Number(loggedInUser.cashback||0), cartTotal * 0.20).toFixed(2) }} (20%)
+                                    Redeem cashback on orders above ₹300
+
                                 </p>
                             </div>
                             <span v-if="useCashback && cashbackApplied > 0"
@@ -960,9 +1061,10 @@
                         </div>
                         <div v-else class="mt-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2 flex items-center gap-2">
                             <i class="fas fa-check-circle text-green-500 text-sm flex-shrink-0"></i>
-                            <p class="text-xs font-bold text-green-700">🎉 Free Delivery! (Bill ₹{{ deliverySettings.minOrderLimit }}+ hai)</p>
+                            <p v-if="isVipActive && vipMembership.freeDelivery" class="text-xs font-bold text-green-700">👑 Free Delivery with VIP membership!</p>
+                            <p v-else class="text-xs font-bold text-green-700">🎉 Free Delivery! (Bill ₹{{ deliverySettings.minOrderLimit }}+ hai)</p>
                         </div>
-                        <div v-if="deliveryChargeApplied > 0" class="flex justify-between items-center font-black text-base mt-2 pt-2 border-t">
+                        <div v-if="deliveryChargeApplied > 0 || vipDiscountApplied > 0" class="flex justify-between items-center font-black text-base mt-2 pt-2 border-t">
                             <span>Grand Total:</span>
                             <span class="text-pink-600">₹{{ grandTotal.toFixed(2) }}</span>
                         </div>
@@ -1029,6 +1131,12 @@
                                style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:28px;">
                                 {{ product.name }}
                             </p>
+
+                            <!-- Weight/Variant Selector -->
+                            <select v-if="product.hasVariants && product.variants" v-model.number="product.selectedVariantIndex" @click.stop @change.stop
+                                    class="w-full text-[10px] font-bold border border-gray-200 rounded-lg px-1 py-1 bg-white text-gray-700 outline-none">
+                                <option v-for="(v, i) in product.variants" :key="i" :value="i">{{ v.weight }} - ₹{{ v.price }}</option>
+                            </select>
 
                             <!-- Price Row -->
                             <div class="flex items-baseline gap-1 flex-wrap">
@@ -1406,6 +1514,25 @@
             <!-- Logged In: Profile Card -->
             <div v-else class="space-y-4">
 
+                <div class="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-4 shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 text-white"><i class="fas fa-crown text-lg"></i></div>
+                        <div class="min-w-0 flex-1">
+                            <template v-if="isVipActive">
+                                <p class="text-sm font-black text-amber-900">👑 VIP Member</p>
+                                <p class="text-xs font-bold text-amber-800">{{ vipMembership.planName }}</p>
+                                <p class="text-[10px] text-amber-700">Expires: {{ formatVipDate(vipMembership.expiryDate) }}</p>
+                            </template>
+                            <template v-else>
+                                <p class="text-sm font-black text-amber-900">Buy VIP Pass @ ₹{{ featuredVipPlan ? Number(featuredVipPlan.price).toFixed(0) : '199' }} - Get Flat {{ featuredVipPlan ? Number(featuredVipPlan.discount) : 10 }}% OFF &amp; {{ featuredVipPlan && !featuredVipPlan.freeDelivery ? 'VIP benefits' : 'Free Delivery' }}</p>
+                                <p class="text-[10px] text-amber-700">Your membership, benefits, and expiry appear here.</p>
+                            </template>
+                            <p v-if="vipMembershipRequest && vipMembershipRequest.status === 'pending'" class="mt-1 text-[10px] font-bold text-blue-700">VIP request pending verification.</p>
+                        </div>
+                        <button @click="openVipPlans()" class="rounded-xl bg-amber-500 px-3 py-2 text-[10px] font-black text-white">{{ isVipActive ? 'View / Renew' : 'Buy / Upgrade' }}</button>
+                    </div>
+                </div>
+
                 <!-- Header Banner + Avatar -->
                 <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
                     <!-- Top gradient banner -->
@@ -1725,6 +1852,7 @@
         <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-2 px-2 flex justify-around items-center z-40 shadow-lg max-w-4xl mx-auto rounded-t-2xl">
             <button @click="activeTab='products'; selectedProduct=null;" :class="activeTab==='products' ? 'text-blue-600 font-bold' : 'text-gray-400'" class="flex flex-col items-center gap-0.5 flex-1"><i class="fas fa-th-large text-xl"></i><span class="text-[10px]">Product</span></button>
             <button @click="if(activeTab!=='wishlist'){activeTab='wishlist'; history.pushState({page:'tab'}, '');}" :class="activeTab==='wishlist' ? 'text-blue-600 font-bold' : 'text-gray-400'" class="flex flex-col items-center gap-0.5 relative flex-1"><i class="fas fa-heart text-xl"></i><span class="text-[10px]">Wishlist</span><span v-if="wishlist.length" class="absolute -top-1 right-3 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{{ wishlist.length }}</span></button>
+            <button @click="openVipPlans()" :class="showVipPlansModal ? 'text-amber-600 font-bold' : 'text-gray-400'" class="flex flex-col items-center gap-0.5 flex-1"><i class="fas fa-crown text-xl text-amber-500"></i><span class="text-[10px]">VIP</span></button>
             <!-- Categories - center prominent -->
             <button @click="if(activeTab!=='categories'){activeTab='categories'; activeCatLeft='All'; history.pushState({page:'tab'}, '');}" :class="activeTab==='categories' ? 'text-purple-600 font-bold' : 'text-gray-400'" class="flex flex-col items-center gap-0.5 flex-1 relative">
                 <div :class="activeTab==='categories' ? 'bg-purple-100' : ''" class="w-12 h-7 flex items-center justify-center rounded-full transition">
@@ -2033,6 +2161,10 @@
                                 <span>Item Total</span>
                                 <span class="font-bold">₹{{ cartTotal.toFixed(2) }}</span>
                             </div>
+                            <div v-if="vipDiscountApplied > 0" class="flex justify-between text-xs font-bold text-amber-700">
+                                <span>👑 VIP Discount</span>
+                                <span>-₹{{ vipDiscountApplied.toFixed(2) }}</span>
+                            </div>
                             <div v-if="deliverySettings.isActive" class="flex justify-between text-xs" :class="deliveryChargeApplied > 0 ? 'text-amber-700' : 'text-green-600'">
                                 <span class="font-semibold flex items-center gap-1">
                                     <i class="fas fa-motorcycle text-xs"></i>
@@ -2047,15 +2179,14 @@
                                  :class="cartTotal >= 300 ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'">
                                 <label class="flex items-center gap-2 cursor-pointer px-2.5 py-2"
                                        :class="cartTotal < 300 ? 'opacity-60' : ''">
-                                    <input type="checkbox" v-model="useCashback" :disabled="cartTotal < 300"
+                            <input type="checkbox" v-model="useCashback"
                                            class="w-3.5 h-3.5 accent-green-500 rounded cursor-pointer flex-shrink-0">
                                     <div class="flex-1">
                                         <p class="text-[11px] font-bold" :class="cartTotal >= 300 ? 'text-green-700' : 'text-gray-500'">
-                                            Use Cashback Balance
+                                             Use Cashback Wallet (₹{{ Number(loggedInUser.cashback || 0).toFixed(2) }})
                                         </p>
                                         <p class="text-[9px]" :class="cartTotal >= 300 ? 'text-green-600' : 'text-gray-400'">
-                                            Avail: ₹{{ Number(loggedInUser.cashback||0).toFixed(2) }}
-                                            · Max: ₹{{ Math.min(Number(loggedInUser.cashback||0), cartTotal*0.20).toFixed(2) }} (20%)
+                                             Redeem cashback on orders of ₹300 or more.
                                         </p>
                                     </div>
                                     <span v-if="useCashback && cashbackApplied > 0"
@@ -2491,9 +2622,85 @@
         </div>
         <!-- ===== END PRIVACY POLICY MODAL ===== -->
 
+        <!-- ===== VIP MEMBERSHIP MODAL ===== -->
+        <div v-if="showVipPlansModal" class="fixed inset-0 z-[100] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="closeVipPlans">
+            <div class="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+                <div class="flex items-center justify-between border-b px-5 py-4">
+                    <div>
+                        <h3 class="text-base font-black text-amber-900"><i class="fas fa-crown text-amber-500 mr-2"></i>VIP Membership</h3>
+                        <p class="text-[11px] text-gray-500">Choose a plan and submit UPI payment proof.</p>
+                    </div>
+                    <button @click="closeVipPlans" class="w-9 h-9 rounded-full bg-gray-100 text-gray-500"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="overflow-y-auto p-5 space-y-4">
+                    <div v-if="isVipActive" class="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                        <p class="text-sm font-black text-amber-900">👑 VIP Member — {{ vipMembership.planName }}</p>
+                        <p class="text-xs text-amber-800 mt-1">Expires: {{ formatVipDate(vipMembership.expiryDate) }} · {{ Number(vipMembership.discountPercent || 0) }}% discount<span v-if="vipMembership.freeDelivery"> · Free delivery</span></p>
+                    </div>
+                    <div v-if="vipMembershipRequest && vipMembershipRequest.status === 'pending'" class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                        <p class="font-black"><i class="fas fa-clock mr-1"></i>Payment request pending review</p>
+                        <p class="mt-1">Your membership activates after the admin verifies your receipt and UTR.</p>
+                    </div>
+                    <div v-else-if="vipMembershipRequest && vipMembershipRequest.status === 'rejected'" class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                        <p class="font-black">Previous VIP payment request was rejected.</p>
+                        <p class="mt-1">Check the payment details and submit a new request if needed.</p>
+                    </div>
+
+                    <div v-if="!vipSelectedPlanId" class="space-y-3">
+                        <p class="text-xs font-black text-gray-600 uppercase tracking-wide">Available Plans</p>
+                        <p v-if="vipPlansError" class="rounded-xl bg-red-50 p-3 text-xs text-red-700">{{ vipPlansError }}</p>
+                        <p v-else-if="!vipPlans.length" class="rounded-xl bg-gray-50 p-4 text-center text-xs text-gray-500">No VIP plans are available yet. Please check back later.</p>
+                        <button v-for="plan in vipPlans" :key="plan.id" @click="vipSelectedPlanId = plan.id" class="w-full rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-white p-4 text-left hover:border-amber-400 hover:shadow-sm transition">
+                            <div class="flex items-start justify-between gap-3">
+                                <div><p class="font-black text-gray-800">{{ plan.name }}</p><p class="mt-1 text-[11px] text-gray-600">{{ plan.durationDays }} days · {{ plan.discount }}% off<span v-if="plan.freeDelivery"> · Free delivery</span></p></div>
+                                <div class="text-right"><p class="text-lg font-black text-amber-700">₹{{ Number(plan.price).toFixed(2) }}</p><span class="text-[10px] font-bold text-amber-600">Select plan <i class="fas fa-chevron-right ml-1"></i></span></div>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div v-else-if="selectedVipPlan" class="space-y-4">
+                        <button @click="vipSelectedPlanId = ''" class="text-xs font-bold text-pink-600"><i class="fas fa-arrow-left mr-1"></i>Back to plans</button>
+                        <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                            <div class="flex justify-between gap-3"><div><p class="font-black text-amber-900">{{ selectedVipPlan.name }}</p><p class="text-[11px] text-amber-800 mt-1">{{ selectedVipPlan.durationDays }} days · {{ selectedVipPlan.discount }}% discount<span v-if="selectedVipPlan.freeDelivery"> · Free delivery</span></p></div><p class="text-lg font-black text-amber-700">₹{{ Number(selectedVipPlan.price).toFixed(2) }}</p></div>
+                        </div>
+                        <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4 space-y-3">
+                            <div v-if="adminQrUrl" class="text-center">
+                                <p class="text-xs font-bold text-gray-700 mb-2">Scan to pay ₹{{ Number(selectedVipPlan.price).toFixed(2) }}</p>
+                                <img :src="adminQrUrl" alt="VIP UPI payment QR" class="mx-auto max-h-44 rounded-xl border bg-white p-2">
+                            </div>
+                            <a v-if="adminPaymentLink && adminPaymentLink !== 'https://paytm.me/'" :href="adminPaymentLink" target="_blank" rel="noopener noreferrer" class="block rounded-xl bg-green-600 px-4 py-3 text-center text-xs font-black text-white"><i class="fas fa-external-link-alt mr-1"></i>Pay ₹{{ Number(selectedVipPlan.price).toFixed(2) }} securely</a>
+                            <p v-if="!adminQrUrl && (!adminPaymentLink || adminPaymentLink === 'https://paytm.me/')" class="text-xs text-red-700">Payment details are not configured. Please contact the store administrator.</p>
+                            <p v-else class="text-[10px] text-gray-500">Complete payment, then upload the receipt and enter the UTR below. VIP activates after admin verification.</p>
+                        </div>
+                        <label class="block text-xs font-bold text-gray-600">UPI transaction / UTR ID
+                            <input v-model.trim="vipUtrId" maxlength="80" class="mt-1 w-full rounded-xl border p-3 text-sm" placeholder="Enter the transaction reference">
+                        </label>
+                        <div>
+                            <p class="mb-2 text-xs font-bold text-gray-600">Payment receipt screenshot</p>
+                            <div v-if="vipReceiptUrl" class="relative mb-2 overflow-hidden rounded-xl border border-green-300">
+                                <img :src="vipReceiptUrl" alt="Uploaded VIP payment receipt" class="h-36 w-full object-cover">
+                                <button @click="vipReceiptUrl = ''" class="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[10px] font-bold text-red-600">Remove</button>
+                            </div>
+                            <label class="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-white p-4 text-xs font-bold text-gray-600 hover:border-amber-400">
+                                <i :class="vipReceiptUploading ? 'fas fa-spinner fa-spin' : 'fas fa-camera'" class="text-amber-500"></i>{{ vipReceiptUploading ? 'Uploading receipt…' : (vipReceiptUrl ? 'Upload another receipt' : 'Choose receipt image') }}
+                                <input type="file" accept="image/*" @change="uploadVipReceipt" class="hidden" :disabled="vipReceiptUploading">
+                            </label>
+                        </div>
+                        <p v-if="vipUploadError" class="rounded-lg bg-red-50 p-2 text-xs text-red-700">{{ vipUploadError }}</p>
+                        <p v-if="vipMembershipRequest && vipMembershipRequest.status === 'pending'" class="text-xs font-semibold text-blue-700">You already have a request awaiting review.</p>
+                        <button @click="submitVipPurchaseRequest" :disabled="vipPurchaseSubmitting || vipReceiptUploading || !!(vipMembershipRequest && vipMembershipRequest.status === 'pending')" class="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 py-3 text-sm font-black text-white shadow disabled:opacity-50">
+                            {{ vipPurchaseSubmitting ? 'Submitting…' : 'Submit Payment for Verification' }}
+                        </button>
+                    </div>
+                    <p class="text-[10px] leading-relaxed text-gray-400">Membership requests are reviewed manually. Do not submit payment details until the UPI payment shown above is complete.</p>
+                </div>
+            </div>
+        </div>
+        <!-- ===== END VIP MEMBERSHIP MODAL ===== -->
+
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+    <script src="vue.js" onerror="window.__pkScriptFallback('https://cdn.jsdelivr.net/npm/vue@2.7.14', 'vue.js')"></script>
     <script>
         const firebaseConfig = { 
             apiKey: "AIzaSyDbVF9_RqXDXdIASOy2WgbwSmwuiowu2Bg", 
@@ -2505,6 +2712,13 @@
             appId: "1:967008233535:android:ac720ab7c8f7b10bf4308a" 
         };
         firebase.initializeApp(firebaseConfig);
+        // Force long-polling instead of WebSockets so Firebase RTDB still
+        // connects on networks (e.g. BSNL) that block/throttle WebSocket traffic.
+        try {
+            firebase.database.constructor.forceLongPolling = true;
+        } catch (e) {
+            console.warn('Could not enable Firebase long-polling fallback:', e);
+        }
         const database = firebase.database();
 
         new Vue({
@@ -2531,12 +2745,28 @@
                 availableCategories: ['All', 'Mobile', 'Electronics', 'Mobile & Accessories', 'Beauty product', 'Footwear', 'vegetables', 'Watches'],
                 selectedCategory: 'All',
                 selectedPaymentMethod: 'COD',
-                useCashback: true,
+                useCashback: false,
                 showPaymentVerifyModal: false,
                 utrId: '',
                 uploadedImageUrl: '',
                 isUploading: false,
                 uploadError: '',
+                vipPlans: [],
+                vipMembership: null,
+                vipMembershipRequest: null,
+                membershipNow: Date.now(),
+                showVipPlansModal: false,
+                vipSelectedPlanId: '',
+                vipUtrId: '',
+                vipReceiptUrl: '',
+                vipReceiptUploading: false,
+                vipPurchaseSubmitting: false,
+                vipUploadError: '',
+                vipPlansError: '',
+                _vipPlansRef: null,
+                _vipCustomerRef: null,
+                _myOrdersRef: null,
+                _vipClockTimer: null,
                 adminPaymentLink: 'https://paytm.me/',
                 adminQrUrl: '',
                 loginForm: { name: '', phone: '' },
@@ -2680,6 +2910,16 @@
                     if (!this.selectedProduct) return []; 
                     return this.products.filter(p => p.category === this.selectedProduct.category && p.id !== this.selectedProduct.id); 
                 },
+                isVipActive() {
+                    const expiry = this.vipMembership && Date.parse(this.vipMembership.expiryDate);
+                    return !!(this.vipMembership && this.vipMembership.status === 'active' && Number.isFinite(expiry) && expiry > this.membershipNow);
+                },
+                featuredVipPlan() {
+                    return this.vipPlans.length ? this.vipPlans[0] : null;
+                },
+                selectedVipPlan() {
+                    return this.vipPlans.find(plan => plan.id === this.vipSelectedPlanId) || null;
+                },
                 cartTotal() { 
                     const items = this.isBuyNowMode && this.buyNowItem ? this.buyNowItem : this.cartItems;
                     return items.reduce((sum, item) => {
@@ -2687,25 +2927,33 @@
                         return sum + disc * item.quantity;
                     }, 0); 
                 },
+                vipDiscountApplied() {
+                    if (!this.isVipActive) return 0;
+                    const percent = Math.max(0, Math.min(100, Number(this.vipMembership.discountPercent) || 0));
+                    const amount = this.cartTotal * percent / 100;
+                    return Math.min(this.cartTotal, Math.round((amount + Number.EPSILON) * 100) / 100);
+                },
                 deliveryChargeApplied() {
                     const ds = this.deliverySettings;
                     if (!ds.isActive) return 0;
                     const items = this.isBuyNowMode && this.buyNowItem ? this.buyNowItem : this.cartItems;
                     if (items.length === 0) return 0;
+                    if (this.isVipActive && this.vipMembership.freeDelivery) return 0;
                     return this.cartTotal < ds.minOrderLimit ? ds.deliveryCharge : 0;
                 },
+
                 cashbackApplied() {
-                    if (!this.useCashback || !this.loggedInUser) return 0;
-                    const cb = Number(this.loggedInUser.cashback) || 0;
-                    if (cb <= 0) return 0;
-                    // Rule: Cart must be ₹300 or more to use cashback
-                    if (this.cartTotal < 300) return 0;
-                    // Rule: Max usage = 20% of cart total OR available balance, whichever is lower
-                    const maxAllowed = Math.min(cb, this.cartTotal * 0.20);
-                    return Math.min(maxAllowed, this.cartTotal + this.deliveryChargeApplied);
-                },
+    if (!this.useCashback || !this.loggedInUser) return 0;
+    if (this.cartTotal < 300) return 0;
+
+    const availableCashback = Number(this.loggedInUser.cashback || 0);
+    const maxUsable = this.cartTotal - this.vipDiscountApplied + this.deliveryChargeApplied;
+
+    return Math.min(availableCashback, maxUsable);
+},
+                
                 grandTotal() {
-                    return Math.max(0, this.cartTotal + this.deliveryChargeApplied - this.cashbackApplied);
+                    return Math.max(0, this.cartTotal - this.vipDiscountApplied + this.deliveryChargeApplied - this.cashbackApplied);
                 },
                 userOrders() {
                     if (!this.loggedInUser) return [];
@@ -2818,21 +3066,8 @@
                     const phone = this.loggedInUser.phone;
                     const uid   = this.loggedInUser.uid;
                     try {
-                        // Try phone path first, fallback to email uid path
-                        let snap = phone ? await database.ref('users/' + phone).once('value') : null;
-                        if (snap && snap.exists()) {
-                            const d = snap.val();
-                            this.userProfile = {
-                                name:    d.name    || this.loggedInUser.name || '',
-                                mobile:  d.phone   || phone || '',
-                                address: d.address || ''
-                            };
-                            // Sync cashback + rewards into loggedInUser
-                            const freshCashback = Number(d.cashback || 0);
-                            const freshRewards  = Number(d.rewards  || 0);
-                            this.loggedInUser = { ...this.loggedInUser, cashback: freshCashback, rewards: freshRewards };
-                            localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
-                        } else if (uid) {
+                        const authenticatedUid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
+                        if (uid && authenticatedUid === uid) {
                             const esnap = await database.ref('users_email/' + uid).once('value');
                             if (esnap.exists()) {
                                 const d = esnap.val();
@@ -2845,14 +3080,18 @@
                                 const freshRewards  = Number(d.rewards  || 0);
                                 this.loggedInUser = { ...this.loggedInUser, cashback: freshCashback, rewards: freshRewards };
                                 localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
+                                if (d.avatarUrl && phone) {
+                                    this.userAvatarUrl = d.avatarUrl;
+                                    localStorage.setItem('sw_avatar_' + phone, d.avatarUrl);
+                                }
                             } else {
                                 this.userProfile = { name: this.loggedInUser.name || '', mobile: '', address: '' };
                             }
                         } else {
-                            this.userProfile = { name: this.loggedInUser.name || '', mobile: phone, address: '' };
+                            this.userProfile = { name: '', mobile: '', address: '' };
                         }
                     } catch(e) {
-                        this.userProfile = { name: this.loggedInUser.name || '', mobile: phone || '', address: '' };
+                        this.userProfile = { name: this.loggedInUser.name || '', mobile: '', address: '' };
                     }
                 },
                 toggleEditProfile() {
@@ -2872,18 +3111,16 @@
                     if (!address)                          { this.showToast('Delivery address cannot be empty', 'error'); return; }
                     this.profileSaving = true;
                     try {
-                        const phone = this.loggedInUser.phone;
                         const uid   = this.loggedInUser.uid;
-                        if (phone) {
-                            // Phone-based login: save under users/<phone>
-                            await database.ref('users/' + phone).update({ name, phone: mobile, address });
-                        } else if (uid) {
-                            // Email-based login: save under users_email/<uid>
-                            await database.ref('users_email/' + uid).update({ name, phone: mobile, address });
-                        } else {
+                        if (!uid || !firebase.auth().currentUser || firebase.auth().currentUser.uid !== uid) {
                             this.showToast('❌ User session error. Please login again.', 'error');
                             return;
                         }
+                        await Promise.all([
+                            database.ref('users_email/' + uid + '/name').set(name),
+                            database.ref('users_email/' + uid + '/phone').set(mobile),
+                            database.ref('users_email/' + uid + '/address').set(address)
+                        ]);
                         this.userProfile = { name, mobile, address };
                         // Sync loggedInUser name
                         this.loggedInUser = { ...this.loggedInUser, name };
@@ -3037,11 +3274,15 @@
                     // buyNow ke liye temporary item banao — cart me ADD mat karo
                     let img = (product.images && product.images[0]) ? product.images[0] : product.image;
                     let sizeLabel = (product.sizes && product.sizes.length) ? (this.selectedSize || 'Free Size') : 'Free Size';
+                    let variant = this.getSelectedVariant(product);
+                    let weightLabel = variant ? variant.weight : '';
+                    let finalPrice = variant ? Number(variant.price) : Number(product.price);
                     this.buyNowItem = [{
                         cartKey: product.id + '_buynow',
                         id: product.id,
                         name: product.name + (sizeLabel && sizeLabel !== 'Free Size' ? ' (' + sizeLabel + ')' : ''),
-                        price: product.price,
+                        price: finalPrice,
+                        weight: weightLabel,
                         image: img,
                         quantity: 1,
                         size: sizeLabel,
@@ -3062,66 +3303,189 @@
                     this.isBuyNowMode = true;
                     this.selectedPaymentMethod='COD'; this.utrId=''; this.uploadedImageUrl=''; this.uploadError=''; this.showCheckoutModal=true; history.pushState({page:'checkout'}, '');
                 },
-                toggleWishlist(product){ let idx = this.wishlist.findIndex(i=>i.id===product.id); idx>-1? this.wishlist.splice(idx,1):this.wishlist.push(product); localStorage.setItem('sw_wishlist',JSON.stringify(this.wishlist)); this.showToast(`${product.name} ${idx>-1?'removed from':'added to'} wishlist`,'info'); },
+                toggleWishlist(product){ let idx = this.wishlist.findIndex(i=>i.id===product.id); idx>-1? this.wishlist.splice(idx,1):this.wishlist.push(product); localStorage.setItem('sw_wishlist',JSON.stringify(this.wishlist)); this.syncWishlistToCloud(); this.showToast(`${product.name} ${idx>-1?'removed from':'added to'} wishlist`,'info'); },
+                getCloudUserPath() {
+                    if (!this.loggedInUser) return null;
+                    if (this.loggedInUser.uid) return 'users_email/' + this.loggedInUser.uid;
+                    return null;
+                },
+                async syncWishlistToCloud() {
+                    const base = this.getCloudUserPath();
+                    if (!base) return;
+                    try { await database.ref(base + '/wishlist').set(this.wishlist); } catch(e) {}
+                },
+                async syncCartToCloud() {
+                    const base = this.getCloudUserPath();
+                    if (!base) return;
+                    try { await database.ref(base + '/cart').set(this.cartItems); } catch(e) {}
+                },
+                async loadUserCloudData() {
+                    const base = this.getCloudUserPath();
+                    if (!base) return;
+                    try {
+                        const snap = await database.ref(base).once('value');
+                        if (snap.exists()) {
+                            const d = snap.val();
+                            if (Array.isArray(d.wishlist)) { this.wishlist = d.wishlist; localStorage.setItem('sw_wishlist', JSON.stringify(this.wishlist)); }
+                            if (Array.isArray(d.cart)) { this.cartItems = d.cart; localStorage.setItem('sw_cart', JSON.stringify(this.cartItems)); }
+                            if (d.avatarUrl) { this.userAvatarUrl = d.avatarUrl; if(this.loggedInUser.phone) localStorage.setItem('sw_avatar_' + this.loggedInUser.phone, d.avatarUrl); }
+                        }
+                    } catch(e) {}
+                },
                 isInWishlist(product){ return this.wishlist.some(i=>i.id===product.id); },
-                openAuth(mode){ this.authMode = mode; this.authSubMode = 'phone'; this.loginForm = { name:'', phone:'' }; this.signupForm = { name:'', phone:'' }; this.emailForm = { email:'', password:'' }; this.emailSignupForm = { name:'', email:'', password:'' }; this.emailAuthError = ''; this.showLoginModal = true; history.pushState({page:'login'}, ''); },
+                openAuth(mode){ this.authMode = mode; this.authSubMode = 'email'; this.loginForm = { name:'', phone:'' }; this.signupForm = { name:'', phone:'' }; this.emailForm = { email:'', password:'' }; this.emailSignupForm = { name:'', email:'', password:'', confirmPassword:'', terms:false }; this.emailAuthError = ''; this.showLoginModal = true; history.pushState({page:'login'}, ''); },
                 async submitSignUp(){
-                    const name = this.signupForm.name.trim();
-                    const phone = this.signupForm.phone.trim();
-                    if(!name || !phone || phone.length < 10){
-                        this.showToast('Valid name & 10-digit mobile required','error'); return;
-                    }
-                    const snap = await database.ref('users/' + phone).once('value');
-                    if(snap.exists()){
-                        this.showToast('⚠️ This mobile number is already registered! Please login.','error');
-                        this.authMode = 'login';
-                        this.loginForm.phone = phone;
-                        return;
-                    }
-                    const user = { name, phone };
-                    await database.ref('users/' + phone).set(user);
-                    this.loggedInUser = user;
-                    localStorage.setItem('sw_user', JSON.stringify(user));
-                    this.startCashbackListener(phone);
-                    this.showLoginModal = false;
-                    this.showToast('✅ Account created! Welcome ' + name, 'info');
-                    this.loadMyOrders();
-                    this._executePendingAction();
+                    this.showToast('Phone login temporarily paused. Please use email login while secure account access is enabled.', 'error');
                 },
                 async submitLogin(){
-                    const name = this.loginForm.name.trim();
-                    const phone = this.loginForm.phone.trim();
-                    if(!name || !phone || phone.length < 10){
-                        this.showToast('Valid name & 10-digit mobile required','error'); return;
-                    }
-                    const snap = await database.ref('users/' + phone).once('value');
-                    if(!snap.exists()){
-                        this.showToast('❌ No account found! Please sign up first.','error');
-                        this.authMode = 'signup';
-                        this.signupForm.name = name;
-                        this.signupForm.phone = phone;
+                    this.showToast('Phone login temporarily paused. Please use email login while secure account access is enabled.', 'error');
+                },
+                startVipPlanListener() {
+                    if (this._vipPlansRef) { try { this._vipPlansRef.off(); } catch(e){} }
+                    this._vipPlansRef = database.ref('admin_settings/membership_plans');
+                    this._vipPlansRef.on('value', snapshot => {
+                        const data = snapshot.val() || {};
+                        this.vipPlans = Object.keys(data).map(id => ({ id, ...data[id] }))
+                            .filter(plan => plan.name && Number(plan.price) > 0 && Number(plan.durationDays) > 0);
+                        this.vipPlansError = '';
+                    }, error => {
+                        this.vipPlansError = 'VIP plans could not be loaded. Please try again later.';
+                        console.error('VIP plan listener error:', error);
+                    });
+                },
+                stopVipListeners() {
+                    if (this._vipCustomerRef) { try { this._vipCustomerRef.off(); } catch(e){} this._vipCustomerRef = null; }
+                    this._vipCustomerUid = null;
+                },
+                startVipListeners(phone, uid) {
+                    this.stopVipListeners();
+                    const user = this.loggedInUser || {};
+                    const authenticatedUid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
+                    const accountUid = uid || user.uid;
+                    const rootPath = accountUid && authenticatedUid === accountUid
+                        ? 'users_email/' + accountUid
+                        : '';
+                    this.vipMembership = null;
+                    this.vipMembershipRequest = null;
+                    if (!rootPath) return;
+                    const listenerUid = accountUid;
+                    this._vipCustomerUid = listenerUid;
+                    this._vipCustomerRef = database.ref(rootPath);
+                    this._vipCustomerRef.on('value', snapshot => {
+                        const currentAuthUid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
+                        if (!this.loggedInUser || this.loggedInUser.uid !== listenerUid ||
+                            currentAuthUid !== listenerUid || this._vipCustomerUid !== listenerUid) return;
+                        const profile = snapshot.val() || {};
+                        this.vipMembership = profile.membership || null;
+                        this.vipMembershipRequest = profile.vipMembershipRequest || null;
+                        this.loggedInUser = { ...this.loggedInUser, membership: this.vipMembership, vipMembershipRequest: this.vipMembershipRequest };
+                        localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
+                    }, error => {
+                        console.error('VIP membership listener error:', error);
+                    });
+                },
+                getVipUserRootPath() {
+                    const user = this.loggedInUser || {};
+                    const authenticatedUid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
+                    return user.uid && authenticatedUid === user.uid ? `users_email/${user.uid}` : '';
+                },
+                formatVipDate(value) {
+                    const timestamp = Date.parse(value);
+                    if (!Number.isFinite(timestamp)) return '—';
+                    const date = new Date(timestamp);
+                    return [String(date.getDate()).padStart(2, '0'), String(date.getMonth() + 1).padStart(2, '0'), date.getFullYear()].join('/');
+                },
+                openVipPlans() {
+                    if (!this.loggedInUser) {
+                        this.pendingAction = 'vip';
+                        this.openAuth('login');
                         return;
                     }
-                    const savedUser = snap.val();
-                    if(savedUser.name.toLowerCase() !== name.toLowerCase()){
-                        this.showToast('❌ Name does not match. Please check and try again.','error'); return;
+                    this.vipSelectedPlanId = '';
+                    this.vipUtrId = '';
+                    this.vipReceiptUrl = '';
+                    this.vipUploadError = '';
+                    this.showVipPlansModal = true;
+                    history.pushState({ page: 'vip' }, '');
+                },
+                closeVipPlans() {
+                    this.showVipPlansModal = false;
+                    this.vipSelectedPlanId = '';
+                    this.vipUtrId = '';
+                    this.vipReceiptUrl = '';
+                    this.vipUploadError = '';
+                },
+                async uploadVipReceipt(event) {
+                    const file = event.target.files && event.target.files[0];
+                    if (!file) return;
+                    this.vipUploadError = '';
+                    this.vipReceiptUrl = '';
+                    if (!file.type.startsWith('image/')) { this.vipUploadError = 'Upload a receipt image.'; event.target.value = ''; return; }
+                    if (file.size > 10 * 1024 * 1024) { this.vipUploadError = 'Receipt image must be smaller than 10 MB.'; event.target.value = ''; return; }
+                    this.vipReceiptUploading = true;
+                    try {
+                        const formData = new FormData();
+                        formData.append('image', file);
+                        const response = await fetch('https://api.imgbb.com/1/upload?key=9b6ea4121e0281d6911d13eaf8d59c86', { method: 'POST', body: formData });
+                        const result = await response.json();
+                        if (!response.ok || !result.success || !result.data || !result.data.url) throw new Error('Receipt upload failed. Please try again.');
+                        this.vipReceiptUrl = result.data.url;
+                    } catch (error) {
+                        this.vipUploadError = error.message || 'Receipt upload failed. Check your connection.';
+                    } finally {
+                        this.vipReceiptUploading = false;
+                        event.target.value = '';
                     }
-                    this.loggedInUser = savedUser;
-                    localStorage.setItem('sw_user', JSON.stringify(savedUser));
-                    this.startCashbackListener(savedUser.phone);
-                    this.showLoginModal = false;
-                    this.showToast('✅ Welcome back, ' + savedUser.name + '!', 'info');
-                    this.loadMyOrders();
-                    this._executePendingAction();
+                },
+                async submitVipPurchaseRequest() {
+                    const plan = this.selectedVipPlan;
+                    const utrId = String(this.vipUtrId || '').trim();
+                    const rootPath = this.getVipUserRootPath();
+                    if (!plan) { this.vipUploadError = 'Select a current VIP plan.'; return; }
+                    if (!rootPath) { this.vipUploadError = 'Sign in again before submitting your request.'; return; }
+                    if (utrId.length < 6) { this.vipUploadError = 'Enter the UPI transaction / UTR ID (at least 6 characters).'; return; }
+                    if (!this.vipReceiptUrl) { this.vipUploadError = 'Upload the payment receipt screenshot.'; return; }
+                    if (this.vipMembershipRequest && this.vipMembershipRequest.status === 'pending') { this.vipUploadError = 'A VIP payment request is already awaiting review.'; return; }
+                    this.vipPurchaseSubmitting = true;
+                    this.vipUploadError = '';
+                    try {
+                        const requestRef = database.ref('vip_membership_requests').push();
+                        const requestedAt = new Date().toISOString();
+                        const user = this.loggedInUser;
+                        const request = {
+                            uid: user.uid || '',
+                            customerName: user.name || this.userProfile.name || 'Customer',
+                            customerPhone: user.phone || user.mobile || '',
+                            customerEmail: (firebase.auth().currentUser && firebase.auth().currentUser.email) || user.email || '',
+                            planId: plan.id,
+                            planName: plan.name,
+                            amount: Number(plan.price),
+                            utrId,
+                            receiptUrl: this.vipReceiptUrl,
+                            status: 'pending',
+                            requestedAt
+                        };
+                        const summary = { requestId: requestRef.key, status: 'pending', planId: plan.id, planName: plan.name, requestedAt };
+                        const updates = {};
+                        updates[`vip_membership_requests/${requestRef.key}`] = request;
+                        updates[`${rootPath}/vipMembershipRequest`] = summary;
+                        await database.ref().update(updates);
+                        this.vipMembershipRequest = summary;
+                        this.closeVipPlans();
+                        this.showToast('VIP payment request submitted. Membership activates after admin verification.', 'info');
+                    } catch (error) {
+                        this.vipUploadError = error.message || 'Could not submit the VIP request.';
+                    } finally {
+                        this.vipPurchaseSubmitting = false;
+                    }
                 },
                 startCashbackListener(phone, uid) {
                     if (this._cashbackRef) { try { this._cashbackRef.off(); } catch(e){} this._cashbackRef = null; }
-                    let ref = null;
-                    if (phone) {
-                        ref = database.ref('users/' + phone);
-                    } else if (uid) {
-                        ref = database.ref('users_email/' + uid);
-                    }
+                    const authenticatedUid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
+                    const accountUid = uid || (this.loggedInUser && this.loggedInUser.uid);
+                    const ref = accountUid && accountUid === authenticatedUid
+                        ? database.ref('users_email/' + accountUid)
+                        : null;
                     if (!ref) return;
                     this._cashbackRef = ref;
                     const vm = this;
@@ -3137,7 +3501,7 @@
                         }
                     });
                 },
-                logout(){ this.loggedInUser=null; localStorage.removeItem('sw_user'); this.orders=[]; this.previousOrderStatuses={}; if(this._cashbackRef){ try{ this._cashbackRef.off(); }catch(e){} this._cashbackRef=null; } try{ firebase.auth().signOut(); }catch(e){} this.showToast('Logged out','info'); },
+                logout(){ this.loggedInUser=null; this.vipMembership=null; this.vipMembershipRequest=null; this.stopVipListeners(); localStorage.removeItem('sw_user'); this.orders=[]; this.previousOrderStatuses={}; if(this._cashbackRef){ try{ this._cashbackRef.off(); }catch(e){} this._cashbackRef=null; } try{ firebase.auth().signOut(); }catch(e){} this.showToast('Logged out','info'); },
 
                 // ── Pending action after login/signup ──
                 _executePendingAction(){
@@ -3147,9 +3511,17 @@
                     } else if(this.pendingAction === 'buynow'){
                         this.pendingAction = null;
                         this.$nextTick(() => { this.openBuyNowCheckout(); });
+                    } else if(this.pendingAction === 'vip'){
+                        this.pendingAction = null;
+                        this.$nextTick(() => { this.openVipPlans(); });
                     } else {
                         this.pendingAction = null;
                     }
+                },
+                async writeEmailProfile(uid, profile) {
+                    await Promise.all(Object.entries(profile).map(([key, value]) =>
+                        database.ref(`users_email/${uid}/${key}`).set(value)
+                    ));
                 },
                 async submitEmailLogin(){
                     this.emailAuthError = '';
@@ -3162,11 +3534,18 @@
                         // Firebase DB se user profile lo
                         const snap = await database.ref('users_email/' + uid).once('value');
                         let userData = snap.val();
-                        if(!userData){ userData = { name: cred.user.displayName || email.split('@')[0], phone: '', email }; }
+                        if(!userData){
+                            userData = { name: cred.user.displayName || (cred.user.email || email).split('@')[0], phone: '', email: cred.user.email || email, uid, createdAt: new Date().toISOString() };
+                            await this.writeEmailProfile(uid, userData);
+                        } else if (!userData.uid) {
+                            await database.ref('users_email/' + uid + '/uid').set(uid);
+                            userData.uid = uid;
+                        }
                         userData.uid = uid;
                         this.loggedInUser = userData;
                         localStorage.setItem('sw_user', JSON.stringify(userData));
                         this.startCashbackListener(userData.phone, uid);
+                        this.startVipListeners(userData.phone, uid);
                         this.showLoginModal = false;
                         this.showToast('✅ Welcome back, ' + userData.name + '!', 'info');
                         this.loadMyOrders();
@@ -3191,11 +3570,12 @@
                     try {
                         const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
                         const uid = cred.user.uid;
-                        const userData = { name: name.trim(), email, phone: mobile || '', uid, createdAt: new Date().toISOString() };
-                        await database.ref('users_email/' + uid).set(userData);
+                        const userData = { name: name.trim(), email: cred.user.email || email, phone: mobile || '', uid, createdAt: new Date().toISOString() };
+                        await this.writeEmailProfile(uid, userData);
                         this.loggedInUser = userData;
                         localStorage.setItem('sw_user', JSON.stringify(userData));
                         this.startCashbackListener(userData.phone, uid);
+                        this.startVipListeners(userData.phone, uid);
                         this.showLoginModal = false;
                         this.showToast('🎉 Account ban gaya! Welcome ' + name.trim(), 'info');
                         this.loadMyOrders();
@@ -3215,14 +3595,17 @@
                     }
                     let img = (product.images && product.images[0]) ? product.images[0] : product.image;
                     let sizeLabel = (product.sizes && product.sizes.length) ? (this.selectedSize || '') : 'Free Size';
-                    let cartKey = product.id + (sizeLabel ? '_' + sizeLabel : '');
+                    let variant = this.getSelectedVariant(product);
+                    let weightLabel = variant ? variant.weight : '';
+                    let finalPrice = variant ? Number(variant.price) : Number(product.price);
+                    let cartKey = product.id + (weightLabel ? '_' + weightLabel : '') + (sizeLabel ? '_' + sizeLabel : '');
                     let existing = this.cartItems.find(i=>i.cartKey===cartKey);
                     if(existing){ existing.quantity+=1; }
-                    else { this.cartItems.push({ cartKey, id:product.id, name:product.name + (sizeLabel && sizeLabel!=='Free Size' ? ' ('+sizeLabel+')' : ''), price:product.price, image:img, quantity:1, size:sizeLabel, shopkeeperName: product.shopkeeperName || product.shopkeeper || product.sellerName || '', shopkeeperId: product.shopkeeperId || product.sellerId || '' }); }
-                    this.showToast(`🛒 ${product.name}${sizeLabel && sizeLabel!=='Free Size' ? ' ['+sizeLabel+']' : ''} added to cart`, 'cart');
-                    localStorage.setItem('sw_cart',JSON.stringify(this.cartItems));
+                    else { this.cartItems.push({ cartKey, id:product.id, name:product.name + (sizeLabel && sizeLabel!=='Free Size' ? ' ('+sizeLabel+')' : ''), price:finalPrice, weight:weightLabel, image:img, quantity:1, size:sizeLabel, shopkeeperName: product.shopkeeperName || product.shopkeeper || product.sellerName || '', shopkeeperId: product.shopkeeperId || product.sellerId || '' }); }
+                    this.showToast(`🛒 ${product.name}${weightLabel ? ' ('+weightLabel+')' : ''}${sizeLabel && sizeLabel!=='Free Size' ? ' ['+sizeLabel+']' : ''} added to cart`, 'cart');
+                    localStorage.setItem('sw_cart',JSON.stringify(this.cartItems)); this.syncCartToCloud();
                 },
-                updateQuantity(item,delta){ let newQty = item.quantity+delta; if(newQty<=0){ this.cartItems = this.cartItems.filter(i=>(i.cartKey||i.id)!==(item.cartKey||item.id)); }else{ item.quantity = newQty; } localStorage.setItem('sw_cart',JSON.stringify(this.cartItems)); },
+                updateQuantity(item,delta){ let newQty = item.quantity+delta; if(newQty<=0){ this.cartItems = this.cartItems.filter(i=>(i.cartKey||i.id)!==(item.cartKey||item.id)); }else{ item.quantity = newQty; } localStorage.setItem('sw_cart',JSON.stringify(this.cartItems)); this.syncCartToCloud(); },
                 openCheckout(){
                     if(!this.cartItems.length) return;
                     if(!this.loggedInUser){
@@ -3259,27 +3642,38 @@
                     }
                 },
                 async confirmOnlineOrder() {
+                    const authUser = firebase.auth().currentUser;
+                    if (!authUser || !this.loggedInUser || this.loggedInUser.uid !== authUser.uid) {
+                        this.showLoginModal = true;
+                        this.showToast('Please sign in with your email account to place an order.', 'error');
+                        return;
+                    }
                     if (!this.checkoutForm.name.trim() || !this.checkoutForm.phone.trim() || this.checkoutForm.phone.length < 10 || !this.checkoutForm.address.trim()) {
                         this.showPaymentVerifyModal = false; this.showCheckoutModal = true;
                         alert('Please fill in delivery details first'); return;
                     }
                     if (!this.uploadedImageUrl) { this.uploadError = 'Please upload payment receipt'; return; }
                     if (this.utrId.length < 6) { alert('Please enter a valid UTR ID'); return; }
-                    const orderItems = this.cartItems.map(it => ({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), cashback:Number(it.cashback||0), shopkeeperName: it.shopkeeperName || it.shopkeeper || '', shopkeeper: it.shopkeeperName || it.shopkeeper || '', shopkeeperId: it.shopkeeperId || '' }));
-                    const usedCashback = this.cashbackApplied;
-                    const totalCashbackEarnable = this.cartItems.reduce((s,i)=>s+Number(i.cashback||0)*i.quantity,0);
+                    const activeItems = this.isBuyNowMode && this.buyNowItem ? this.buyNowItem : this.cartItems;
+                    const orderItems = activeItems.map(it => ({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), weight: it.weight || '', cashback:Number(it.cashback||0), shopkeeperName: it.shopkeeperName || it.shopkeeper || '', shopkeeper: it.shopkeeperName || it.shopkeeper || '', shopkeeperId: it.shopkeeperId || '' }));
+                    const usedCashback = Number(this.cashbackApplied || 0);
+                    const totalCashbackEarnable = 0;
                     const newOrder = {
                         customerName: this.checkoutForm.name.trim(),
                         customerPhone: this.checkoutForm.phone.trim(),
                         customerAddress: this.checkoutForm.address.trim(),
-                        userEmail: this.loggedInUser ? (this.loggedInUser.email || this.checkoutForm.phone.trim()) : this.checkoutForm.phone.trim(),
-                        customerEmail: this.loggedInUser ? (this.loggedInUser.email || '') : '',
-                        uid: this.loggedInUser ? (this.loggedInUser.uid || '') : '',
+                        userEmail: authUser.email || '',
+                        customerEmail: authUser.email || '',
+                        uid: authUser.uid,
                         items: orderItems,
                         itemTotal: this.cartTotal,
+                        vipDiscount: this.vipDiscountApplied,
+                        isVipOrder: this.isVipActive,
+                        vipPlanId: this.isVipActive ? this.vipMembership.planId : '',
+                        vipPlanName: this.isVipActive ? this.vipMembership.planName : '',
                         deliveryCharge: this.deliveryChargeApplied,
                         cashbackUsed: usedCashback,
-                        totalCashbackEarnable: totalCashbackEarnable,
+                        totalCashbackEarnable: 0,
                         cashbackCredited: false,
                         total: this.grandTotal,
                         status: 'pending',
@@ -3291,21 +3685,16 @@
                     };
                     try {
                         await database.ref('orders').push(newOrder);
-                        if (!this.loggedInUser) {
-                            const newUser = { name: newOrder.customerName, phone: newOrder.customerPhone };
-                            await database.ref(`users/${newUser.phone}`).set(newUser);
-                            this.loggedInUser = newUser; localStorage.setItem('sw_user', JSON.stringify(newUser));
-                        }
-                        // Deduct used cashback from user's wallet
-                        if (usedCashback > 0 && this.loggedInUser) {
-                            const phone = this.loggedInUser.phone || this.checkoutForm.phone.trim();
-                            const remainingCashback = Math.max(0, Number(this.loggedInUser.cashback || 0) - usedCashback);
-                            await database.ref(`users/${phone}/cashback`).set(remainingCashback);
-                            this.loggedInUser = { ...this.loggedInUser, cashback: remainingCashback };
+                        if (usedCashback > 0) {
+                            const cashbackRef = database.ref(`users_email/${authUser.uid}/cashback`);
+                            const cashbackResult = await cashbackRef.transaction(currentCashback =>
+                                Math.max(0, Number(currentCashback || 0) - usedCashback)
+                            );
+                            this.loggedInUser.cashback = Number(cashbackResult.snapshot.val() || 0);
                             localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
                         }
-                        if(!this.isBuyNowMode){ this.cartItems = []; localStorage.removeItem('sw_cart'); }
-                        this.buyNowItem=null; this.isBuyNowMode=false; this.useCashback=true;
+                        if(!this.isBuyNowMode){ this.cartItems = []; localStorage.removeItem('sw_cart'); this.syncCartToCloud(); }
+                        this.buyNowItem=null; this.isBuyNowMode=false; this.useCashback=false;
                         this.showPaymentVerifyModal = false; this.selectedProduct = null;
                         this.utrId = ''; this.uploadedImageUrl = '';
                         this.showOrderSuccess = true;
@@ -3314,27 +3703,31 @@
                     } catch(e) { alert(e.message); }
                 },
                 async confirmOrder(){
+                    const authUser = firebase.auth().currentUser;
+                    if (!authUser || !this.loggedInUser || this.loggedInUser.uid !== authUser.uid) {
+                        this.showLoginModal = true;
+                        this.showToast('Please sign in with your email account to place an order.', 'error');
+                        return;
+                    }
                     if(!this.checkoutForm.name.trim()||!this.checkoutForm.phone.trim()||this.checkoutForm.phone.length<10||!this.checkoutForm.address.trim()){ alert('All fields required'); return; }
                     const activeItems = this.isBuyNowMode ? this.buyNowItem : this.cartItems;
-                    const orderItems = activeItems.map(it=>({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), cashback:Number(it.cashback||0), shopkeeperName:it.shopkeeperName||it.shopkeeper||'', shopkeeper:it.shopkeeperName||it.shopkeeper||'', shopkeeperId:it.shopkeeperId||'' }));
-                    const itemTotal = activeItems.reduce((s,i)=>s+Number(i.price)*i.quantity,0);
-                    const totalCashbackEarnable = activeItems.reduce((s,i)=>s+Number(i.cashback||0)*i.quantity,0);
-                    const usedCashback = this.cashbackApplied;
-                    const newOrder = { customerName:this.checkoutForm.name.trim(), customerPhone:this.checkoutForm.phone.trim(), customerAddress:this.checkoutForm.address.trim(), userEmail:this.loggedInUser?(this.loggedInUser.email||this.checkoutForm.phone.trim()):this.checkoutForm.phone.trim(), customerEmail:this.loggedInUser?(this.loggedInUser.email||''):'', uid:this.loggedInUser?(this.loggedInUser.uid||''):'', items:orderItems, itemTotal:itemTotal, deliveryCharge:this.deliveryChargeApplied, cashbackUsed:usedCashback, totalCashbackEarnable:totalCashbackEarnable, cashbackCredited:false, total:this.grandTotal, status:'pending', paymentMethod:'COD', payment_method:'COD', date:new Date().toISOString() };
+                    const orderItems = activeItems.map(it=>({ id:it.id, name:it.name, quantity:it.quantity, price:Number(it.price), weight: it.weight || '', cashback:Number(it.cashback||0), shopkeeperName:it.shopkeeperName||it.shopkeeper||'', shopkeeper:it.shopkeeperName||it.shopkeeper||'', shopkeeperId:it.shopkeeperId||'' }));
+                    const totalCashbackEarnable = 0;
+                    const usedCashback = Number(this.cashbackApplied || 0);
+                    const newOrder = { customerName:this.checkoutForm.name.trim(), customerPhone:this.checkoutForm.phone.trim(), customerAddress:this.checkoutForm.address.trim(), userEmail:authUser.email||'', customerEmail:authUser.email||'', uid:authUser.uid, items:orderItems, itemTotal:this.cartTotal, vipDiscount:this.vipDiscountApplied, isVipOrder:this.isVipActive, vipPlanId:this.isVipActive?this.vipMembership.planId:'', vipPlanName:this.isVipActive?this.vipMembership.planName:'', deliveryCharge:this.deliveryChargeApplied, cashbackUsed:usedCashback, totalCashbackEarnable:0, cashbackCredited:false, total:this.grandTotal, status:'pending', paymentMethod:'COD', payment_method:'COD', date:new Date().toISOString() };
                     try{
                         await database.ref('orders').push(newOrder);
-                        if(!this.loggedInUser){ const newUser = { name:newOrder.customerName, phone:newOrder.customerPhone }; await database.ref(`users/${newUser.phone}`).set(newUser); this.loggedInUser=newUser; localStorage.setItem('sw_user',JSON.stringify(newUser)); }
-                        // Deduct used cashback from user's wallet
-                        if(usedCashback > 0 && this.loggedInUser){
-                            const phone = this.loggedInUser.phone || this.checkoutForm.phone.trim();
-                            const remainingCashback = Math.max(0, Number(this.loggedInUser.cashback||0) - usedCashback);
-                            await database.ref(`users/${phone}/cashback`).set(remainingCashback);
-                            this.loggedInUser = { ...this.loggedInUser, cashback: remainingCashback };
+                        if (usedCashback > 0) {
+                            const cashbackRef = database.ref(`users_email/${authUser.uid}/cashback`);
+                            const cashbackResult = await cashbackRef.transaction(currentCashback =>
+                                Math.max(0, Number(currentCashback || 0) - usedCashback)
+                            );
+                            this.loggedInUser.cashback = Number(cashbackResult.snapshot.val() || 0);
                             localStorage.setItem('sw_user', JSON.stringify(this.loggedInUser));
                         }
                         // Sirf normal cart ko clear karo, buyNow mode mein cart safe rahe
-                        if(!this.isBuyNowMode){ this.cartItems=[]; localStorage.removeItem('sw_cart'); }
-                        this.buyNowItem=null; this.isBuyNowMode=false; this.useCashback=true;
+                        if(!this.isBuyNowMode){ this.cartItems=[]; localStorage.removeItem('sw_cart'); this.syncCartToCloud(); }
+                        this.buyNowItem=null; this.isBuyNowMode=false; this.useCashback=false;
                         this.showCheckoutModal=false; this.selectedProduct=null; this.showOrderSuccess=true; this.showToast('Order placed!','order'); this.loadMyOrders();
                     }catch(e){ alert(e.message); }
                 },
@@ -3344,13 +3737,14 @@
                     if(this.showFullScreenImage){ this.showFullScreenImage=false; return; }
                     if(this.showLoginModal){ this.showLoginModal=false; return; }
                     if(this.showCheckoutModal){ this.showCheckoutModal=false; this.isBuyNowMode=false; this.buyNowItem=null; return; }
+                    if(this.showVipPlansModal){ this.closeVipPlans(); return; }
                     if(this.showPaymentVerifyModal){ this.showPaymentVerifyModal=false; return; }
                     if(this.showReturnPage){ this.showReturnPage=false; return; }
                     if(this.showSearchResults){ this.showSearchResults=false; this.searchQuery=''; window.scrollTo({top:0,behavior:'smooth'}); return; }
                     if(this.selectedProduct){ this.selectedProduct=null; window.scrollTo({top:0,behavior:'smooth'}); return; }
                     if(this.activeTab !== 'products'){ this.activeTab='products'; return; }
                 },
-                async submitReturnExchangeRequest(){ if(!this.returnPayload.reason||!this.returnPayload.action){ alert('Select reason & action'); return; } if(this.returnPayload.action==='Return'){ let b=this.returnPayload.bankDetails; if(!b.name||!b.bankName||!b.accNumber||!b.ifsc||!b.phone){ alert('Bank details required'); return; } } const reqData={ orderId:this.activeReturnOrder.id, customerPhone:this.activeReturnOrder.customerPhone, reason:this.returnPayload.reason, type:this.returnPayload.action, bankDetails:this.returnPayload.action==='Return'?this.returnPayload.bankDetails:null, timestamp:new Date().toISOString() }; await database.ref('return_requests').push(reqData); await database.ref(`orders/${this.activeReturnOrder.id}`).update({ returnRequest:true, status:this.returnPayload.action.toLowerCase()+'_requested' }); this.showReturnPage=false; this.showToast(`${this.returnPayload.action} request submitted`,'order'); this.loadMyOrders(); },
+                async submitReturnExchangeRequest(){ if(!this.loggedInUser || !this.loggedInUser.uid || !firebase.auth().currentUser || firebase.auth().currentUser.uid !== this.loggedInUser.uid){ this.showToast('Please sign in with your email account first.','error'); return; } if(!this.returnPayload.reason||!this.returnPayload.action){ alert('Select reason & action'); return; } if(this.returnPayload.action==='Return'){ let b=this.returnPayload.bankDetails; if(!b.name||!b.bankName||!b.accNumber||!b.ifsc||!b.phone){ alert('Bank details required'); return; } } const reqData={ uid:this.loggedInUser.uid, orderId:this.activeReturnOrder.id, customerPhone:this.activeReturnOrder.customerPhone, reason:this.returnPayload.reason, type:this.returnPayload.action, bankDetails:this.returnPayload.action==='Return'?this.returnPayload.bankDetails:null, timestamp:new Date().toISOString() }; await database.ref('return_requests').push(reqData); await database.ref(`orders/${this.activeReturnOrder.id}/returnRequest`).set(true); await database.ref(`orders/${this.activeReturnOrder.id}/status`).set(this.returnPayload.action.toLowerCase()+'_requested'); this.showReturnPage=false; this.showToast(`${this.returnPayload.action} request submitted`,'order'); this.loadMyOrders(); },
                 
                 // Advanced Review Input handler (Image to Base64)
                 handleReviewFileChange(e) {
@@ -3393,9 +3787,9 @@
                     }
 
                     const reviewObject = {
+                        uid: this.loggedInUser && this.loggedInUser.uid || '',
                         orderId: order.id,
                         customerName: order.customerName || 'Verified Buyer',
-                        customerPhone: order.customerPhone || '',
                         rating: this.reviewDraft.rating,
                         comment: this.reviewDraft.comment.trim(),
                         reviewImage: uploadedDriveUrl,
@@ -3404,11 +3798,11 @@
 
                     if (order.items && order.items.length) {
                         for (let item of order.items) {
-                            await database.ref(`reviews/${item.id}`).push(reviewObject);
+                            await database.ref(`public_reviews/${item.id}`).push(reviewObject);
                         }
                     }
 
-                    await database.ref(`orders/${order.id}`).update({ rating: this.reviewDraft.rating });
+                    await database.ref(`orders/${order.id}/rating`).set(this.reviewDraft.rating);
                     this.reviewDraft = { rating: 0, comment: '', base64File: '', fileName: '', fileType: '' };
                     this.isUploadingReview = false;
                     this.showToast('Review submit ho gaya! Shukriya 🙏', 'order');
@@ -3431,22 +3825,31 @@
                 },
 
                 calculateDiscount(orig,curr){ if(!orig||!curr) return 0; return Math.round(((Number(orig)-Number(curr))/Number(orig))*100); },
+                getSelectedVariant(product) {
+                    if (!product || !product.hasVariants || !product.variants || !product.variants.length) return null;
+                    const idx = (product.selectedVariantIndex !== undefined && product.variants[product.selectedVariantIndex]) ? product.selectedVariantIndex : 0;
+                    return product.variants[idx] || product.variants[0];
+                },
+                getBasePrice(product) {
+                    const variant = this.getSelectedVariant(product);
+                    return variant ? Number(variant.price) : Number(product.price);
+                },
                 getEffectivePrice(product) {
-                    const base = Number(product.price);
+                    const base = this.getBasePrice(product);
                     if (!this.globalDiscount || this.globalDiscount <= 0) return base;
                     return Math.round(base * (1 - this.globalDiscount / 100));
                 },
                 getEffectiveOriginal(product) {
-                    // If global discount is on, original = product's own price (before discount)
-                    if (this.globalDiscount > 0) return Number(product.price);
-                    // Otherwise use stored originalPrice if exists
-                    return product.originalPrice ? Number(product.originalPrice) : null;
+                    // If global discount is on, original = product's own (variant-aware) price before discount
+                    if (this.globalDiscount > 0) return this.getBasePrice(product);
+                    // Otherwise use stored originalPrice if exists (only meaningful for non-variant products)
+                    return (!product.hasVariants && product.originalPrice) ? Number(product.originalPrice) : null;
                 },
                 getTotalDiscount(product) {
-                    const orig = Number(product.originalPrice || product.price);
-                    const eff = this.getEffectivePrice(product);
-                    if (orig <= eff) return 0;
-                    return Math.round(((orig - eff) / orig) * 100);
+                    const orig = Number(product.originalPrice);
+                    const price = Number(product.price);
+                    if (!orig || orig <= price) return 0;
+                    return Math.round(((orig - price) / orig) * 100);
                 },
                 getTrackingProgressWidth(s){ let map={pending:'0%',confirmed:'33%',shipped:'66%',delivered:'100%'}; return map[s]||'0%'; },
                 getTrackingCircleClass(orderStatus,step){ let steps=['pending','confirmed','shipped','delivered']; let idx=steps.indexOf(orderStatus),stepIdx=steps.indexOf(step); if(stepIdx<idx) return 'bg-green-500 text-white border-2 border-green-600'; if(stepIdx===idx) return orderStatus==='delivered'?'bg-green-600 text-white pulse-glow':'bg-blue-600 text-white pulse-glow'; return 'bg-white text-gray-300 border-2 border-gray-200'; },
@@ -3465,20 +3868,17 @@
                     if (cls === 'active') return 'text-blue-600';
                     return 'text-gray-400';
                 },
-                loadProducts(){ database.ref('products').on('value',(snapshot)=>{ let data=snapshot.val(); this.products=data?Object.keys(data).map(key=>({ id:key, ...data[key] })):[];  this.$nextTick(()=>this.loadSuggestions()); }); },
+                loadProducts(){ database.ref('products').on('value',(snapshot)=>{ let data=snapshot.val(); if(data){ this.products=Object.keys(data).map(key=>({ id:key, ...data[key], selectedVariantIndex: 0 })); } else if(!this.products.length){ this.products=[]; } this.$nextTick(()=>this.loadSuggestions()); }); },
                 loadMyOrders(){
-                    if(!this.loggedInUser) return;
-                    database.ref('orders').on('value',(snapshot)=>{
+                    const uid = this.loggedInUser && this.loggedInUser.uid;
+                    const authenticatedUid = firebase.auth().currentUser && firebase.auth().currentUser.uid;
+                    if (this._myOrdersRef) { try { this._myOrdersRef.off(); } catch(e){} this._myOrdersRef = null; }
+                    if (!uid || uid !== authenticatedUid) { this.orders = []; return; }
+                    this._myOrdersRef = database.ref('orders').orderByChild('uid').equalTo(uid);
+                    this._myOrdersRef.on('value',(snapshot)=>{
                         let data=snapshot.val();
                         if(data){
-                            let allOrders=Object.keys(data).map(key=>({ id:key, ...data[key] }));
-                            const u=this.loggedInUser;
-                            let updatedOrders=allOrders.filter(o=>{
-                                if(u.phone && u.phone.length>=10 && o.customerPhone===u.phone) return true;
-                                if(u.email && (o.userEmail===u.email || o.customerEmail===u.email)) return true;
-                                if(u.uid && o.uid===u.uid) return true;
-                                return false;
-                            }).reverse();
+                            let updatedOrders=Object.keys(data).map(key=>({ id:key, ...data[key] })).reverse();
                             updatedOrders.forEach(order=>{
                                 let old=this.previousOrderStatuses[order.id];
                                 if(old && old!==order.status){
@@ -3489,26 +3889,6 @@
                                     else if(order.status==='return_rejected'||order.status==='exchange_rejected') this.showToast(`Return/Exchange rejected for #${shortId}`,'error');
                                 }
                                 this.previousOrderStatuses[order.id]=order.status;
-                                // ── Credit cashback when order is delivered ──
-                                if(order.status==='delivered' && !order.cashbackCredited && Number(order.totalCashbackEarnable||0)>0){
-                                    const earn=Number(order.totalCashbackEarnable);
-                                    const phone=this.loggedInUser.phone;
-                                    const uid=this.loggedInUser.uid;
-                                    // Mark credited immediately to prevent double-credit
-                                    database.ref('orders/'+order.id).update({ cashbackCredited: true });
-                                    if(phone){
-                                        database.ref('users/'+phone).once('value').then(snap=>{
-                                            const cur=snap.exists()?Number(snap.val().cashback||0):0;
-                                            database.ref('users/'+phone).update({ cashback: cur+earn });
-                                        });
-                                    } else if(uid){
-                                        database.ref('users_email/'+uid).once('value').then(snap=>{
-                                            const cur=snap.exists()?Number(snap.val().cashback||0):0;
-                                            database.ref('users_email/'+uid).update({ cashback: cur+earn });
-                                        });
-                                    }
-                                    this.showToast(`💰 ₹${earn.toFixed(0)} cashback wallet mein add ho gaya!`,'success');
-                                }
                             });
                             this.orders=updatedOrders;
                         } else {
@@ -3519,7 +3899,7 @@
                 },
                 loadBanners(){ database.ref('banners').on('value',(snapshot)=>{ let val=snapshot.val(); this.banners=val?Object.values(val):['https://placehold.co/800x400?text=Pinkkart+Offers']; }); },
                 loadReviewsFeed() {
-                    database.ref('reviews').on('value', (snapshot) => {
+                    database.ref('public_reviews').on('value', (snapshot) => {
                         this.globalReviews = snapshot.exists() ? snapshot.val() : {};
                     });
                 },
@@ -3573,7 +3953,7 @@
                 },
                 async submitRating(orderId, star) {
                     try {
-                        await database.ref(`orders/${orderId}`).update({ rating: star });
+                        await database.ref(`orders/${orderId}/rating`).set(star);
                         this.showToast(`Rating submitted: ${star} ⭐`, 'order');
                         this.loadMyOrders();
                     } catch(e) {
@@ -3603,8 +3983,8 @@
                                 this.userAvatarUrl = imgUrl;
                                 localStorage.setItem(storageKey, imgUrl);
                                 // Firebase me bhi save karo agar logged in ho
-                                if (this.loggedInUser) {
-                                    await database.ref('users/' + this.loggedInUser.phone).update({ avatarUrl: imgUrl });
+                                if (this.loggedInUser && this.loggedInUser.uid && firebase.auth().currentUser && firebase.auth().currentUser.uid === this.loggedInUser.uid) {
+                                    await database.ref('users_email/' + this.loggedInUser.uid).update({ avatarUrl: imgUrl });
                                 }
                                 this.showToast('✅ Profile photo update ho gaya!', 'success');
                             } else {
@@ -3667,7 +4047,12 @@
                 }
             },
             mounted() {
-                let saved = localStorage.getItem('sw_user'); if(saved){ this.loggedInUser = JSON.parse(saved); let av = localStorage.getItem('sw_avatar_' + this.loggedInUser.phone); if(av) this.userAvatarUrl = av; let logo = localStorage.getItem('pk_shop_logo'); if(logo) this.shopLogoUrl = logo; }
+                // Never trust a browser-stored profile as proof of sign-in.
+                localStorage.removeItem('sw_user');
+                this.loggedInUser = null;
+                this.vipMembership = null;
+                this.vipMembershipRequest = null;
+                let logo = localStorage.getItem('pk_shop_logo'); if(logo) this.shopLogoUrl = logo;
                 // Bina login ke bhi local avatar load karo
                 if (!this.userAvatarUrl) { let localAv = localStorage.getItem('sw_avatar_local'); if(localAv) this.userAvatarUrl = localAv; }
                 let savedWish = localStorage.getItem('sw_wishlist'); if(savedWish) this.wishlist = JSON.parse(savedWish);
@@ -3675,24 +4060,39 @@
                 let savedRV = localStorage.getItem('sw_recently_viewed'); if(savedRV) this.recentlyViewed = JSON.parse(savedRV);
                 // Restore theme
                 if(localStorage.getItem('pk_theme') === 'dark'){ this.isDark = true; document.body.classList.add('dark-mode'); }
-                if(this.loggedInUser) { this.fetchProfile(); this.startCashbackListener(this.loggedInUser.phone, this.loggedInUser.uid); }
+                this.startVipPlanListener();
+                this._vipClockTimer = window.setInterval(() => { this.membershipNow = Date.now(); }, 60000);
                 this.loadProducts(); this.loadMyOrders(); this.loadBanners(); this.loadAdminControls(); this.loadReviewsFeed(); this.startSlider();
 
                 // --- FIREBASE EMAIL AUTH STATE LISTENER ---
                 const vm = this;
                 firebase.auth().onAuthStateChanged(async (firebaseUser) => {
-                    if(firebaseUser && !vm.loggedInUser){
+                    if(firebaseUser){
                         // Email se logged in user
                         try {
                             const snap = await database.ref('users_email/' + firebaseUser.uid).once('value');
                             if(snap.exists()){
                                 const userData = snap.val();
+                                if (userData.uid && userData.uid !== firebaseUser.uid) throw new Error('Account profile UID mismatch.');
+                                if (!userData.uid) {
+                                    await database.ref('users_email/' + firebaseUser.uid + '/uid').set(firebaseUser.uid);
+                                    userData.uid = firebaseUser.uid;
+                                }
                                 vm.loggedInUser = userData;
                                 localStorage.setItem('sw_user', JSON.stringify(userData));
+                                vm.fetchProfile();
                                 vm.loadMyOrders();
                                 vm.startCashbackListener(userData.phone, firebaseUser.uid);
+                                vm.startVipListeners(userData.phone, firebaseUser.uid);
+                                vm.loadUserCloudData();
                             }
                         } catch(e) { console.log('Auth state check error:', e); }
+                    } else {
+                        vm.loggedInUser = null;
+                        vm.vipMembership = null;
+                        vm.vipMembershipRequest = null;
+                        localStorage.removeItem('sw_user');
+                        vm.stopVipListeners();
                     }
                 });
 
@@ -3736,7 +4136,7 @@
                 history.replaceState({page:'home'}, '');
                 history.pushState({page:'app'}, '');
                 window.addEventListener('popstate', function(e) {
-                    const hasBack = vm.showFullScreenImage || vm.showLoginModal || vm.showCheckoutModal || vm.showPaymentVerifyModal || vm.showReturnPage || vm.selectedProduct || vm.activeTab !== 'products';
+                    const hasBack = vm.showFullScreenImage || vm.showLoginModal || vm.showCheckoutModal || vm.showPaymentVerifyModal || vm.showVipPlansModal || vm.showReturnPage || vm.selectedProduct || vm.activeTab !== 'products';
                     if(hasBack){
                         vm.handleBackButton();
                         history.pushState({page:'app'}, '');
