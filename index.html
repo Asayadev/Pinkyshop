@@ -522,29 +522,30 @@
                     </div>
                 </div>
 
-                <!-- "Still looking for these?" section -->
-                <div v-if="recentlyViewed.length > 0" class="rounded-2xl overflow-hidden" style="background:#f5ff00; border: 2px solid #e5ef00;">
+                                <!-- "Still looking for these?" section -->
+                <div v-if="recentlyViewed.length > 0" class="rounded-2xl overflow-hidden shadow-sm" style="background:#FDF2F8; border: 1.5px solid #FBCFE8;">
                     <div class="px-4 pt-3 pb-2">
-                        <h3 class="text-base font-black text-gray-900 leading-tight">
+                        <h3 class="text-base font-black text-pink-950 leading-tight">
                             <span v-if="loggedInUser">{{ loggedInUser.name.split(' ')[0] }}, </span>still looking for these?
                         </h3>
                     </div>
                     <div class="flex gap-3 overflow-x-auto no-scrollbar px-3 pb-4">
                         <div v-for="product in recentlyViewed.slice(0,8)" :key="'rv_'+product.id"
                              @click="viewProductDetail(product)"
-                             class="flex-shrink-0 w-28 bg-white rounded-2xl overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition">
-                            <div class="h-24 bg-gray-50 flex items-center justify-center p-2">
+                             class="flex-shrink-0 w-28 bg-white rounded-2xl overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition border border-pink-100">
+                            <div class="h-24 bg-white flex items-center justify-center p-2">
                                 <img :src="getDriveImageUrl(product.images && product.images.length ? product.images[0] : (product.image||'https://placehold.co/200x200?text=P'))"
                                      class="w-full h-full object-contain"
                                      onerror="this.src='https://placehold.co/200x200?text=P'">
                             </div>
                             <div class="px-2 pb-2 pt-1">
                                 <p class="text-[10px] font-semibold text-gray-700 truncate leading-tight mb-1">{{ product.name }}</p>
-                                <button class="w-full text-[10px] font-black text-gray-900 bg-yellow-300 hover:bg-yellow-400 py-1 rounded-lg transition">View</button>
+                                <button class="w-full text-[10px] font-black text-white bg-pink-500 hover:bg-pink-600 py-1 rounded-lg transition shadow-xs">View</button>
                             </div>
                         </div>
                     </div>
                 </div>
+
 
                 <!-- Categories in 2 rows -->
                 <div>
@@ -3780,9 +3781,12 @@
                     reader.readAsDataURL(file);
                 },
 
-                // Submit review reliably; an optional photo upload must not block saving.
+                                // Submit review with fast ImgBB photo upload
                 async submitAdvancedReview(order) {
-                    if (this.reviewDraft.rating === 0) { this.showToast('Pehle star rating select karein!', 'error'); return; }
+                    if (this.reviewDraft.rating === 0) { 
+                        this.showToast('Pehle star rating select karein!', 'error'); 
+                        return; 
+                    }
                     if (this.isUploadingReview) return;
                     const authUser = firebase.auth().currentUser;
                     if (!authUser || !this.loggedInUser || authUser.uid !== this.loggedInUser.uid) {
@@ -3796,44 +3800,34 @@
                     }
 
                     this.isUploadingReview = true;
-                    let uploadedDriveUrl = "";
-                    let photoUploadFailed = false;
+                    let uploadedImageUrl = "";
+
                     try {
+                        // Direct Fast ImgBB Upload
                         if (this.reviewDraft.base64File) {
-                            const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-                            const uploadTimeout = window.setTimeout(() => {
-                                if (controller) controller.abort();
-                            }, 12000);
                             try {
-                                const response = await fetch(this.googleDriveScriptUrl, {
+                                const formData = new FormData();
+                                formData.append('image', this.reviewDraft.base64File);
+                                const res = await fetch('https://api.imgbb.com/1/upload?key=9b6ea4121e0281d6911d13eaf8d59c86', {
                                     method: 'POST',
-                                    mode: 'cors',
-                                    body: JSON.stringify({
-                                        base64: this.reviewDraft.base64File,
-                                        mimeType: this.reviewDraft.fileType,
-                                        fileName: this.reviewDraft.fileName
-                                    }),
-                                    ...(controller ? { signal: controller.signal } : {})
+                                    body: formData
                                 });
-                                if (!response.ok) throw new Error(`Photo upload returned HTTP ${response.status}`);
-                                const resData = await response.json();
-                                uploadedDriveUrl = resData && (resData.link || resData.url) || '';
-                                if (!uploadedDriveUrl) photoUploadFailed = true;
+                                const resData = await res.json();
+                                if (resData && resData.success && resData.data && resData.data.url) {
+                                    uploadedImageUrl = resData.data.url;
+                                }
                             } catch (uploadError) {
-                                photoUploadFailed = true;
-                                console.warn('Review photo upload failed; continuing without the photo.', uploadError);
-                            } finally {
-                                window.clearTimeout(uploadTimeout);
+                                console.warn('ImgBB photo upload failed:', uploadError);
                             }
                         }
 
                         const reviewObject = {
                             uid: authUser.uid,
                             orderId: order.id,
-                            customerName: order.customerName || 'Verified Buyer',
+                            customerName: order.customerName || (this.loggedInUser && this.loggedInUser.name) || 'Verified Buyer',
                             rating: Number(this.reviewDraft.rating),
                             comment: String(this.reviewDraft.comment || '').trim(),
-                            reviewImage: uploadedDriveUrl,
+                            reviewImage: uploadedImageUrl,
                             timestamp: new Date().toISOString()
                         };
 
@@ -3848,24 +3842,13 @@
                         });
                         updates[`orders/${order.id}/rating`] = reviewObject.rating;
 
-                        // Save the public review(s) and order rating together to avoid partial submissions.
                         await database.ref().update(updates);
                         this.reviewDraft = { rating: 0, comment: '', base64File: '', fileName: '', fileType: '' };
-                        this.showToast(
-                            photoUploadFailed
-                                ? 'Review submit ho gaya, lekin photo upload nahi hui. Review bina photo ke save hai.'
-                                : 'Review submit ho gaya! Shukriya 🙏',
-                            photoUploadFailed ? 'info' : 'order'
-                        );
+                        this.showToast('Review submit ho gaya! Shukriya 🙏', 'order');
                         this.loadMyOrders();
                     } catch (error) {
                         console.error('Review submission failed:', error);
-                        this.showToast(
-                            error && error.message
-                                ? `Review save nahi hua: ${error.message}`
-                                : 'Review save nahi hua. Internet ya Firebase permission check karke dobara try karein.',
-                            'error'
-                        );
+                        this.showToast('Review save nahi hua. Firebase rules check karein.', 'error');
                     } finally {
                         this.isUploadingReview = false;
                     }
